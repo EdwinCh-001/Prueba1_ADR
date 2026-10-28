@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 
 import { findRemoteReadingByClientId, sendReading } from '../api/reading-api';
 import { fetchMeter } from '../api/meter-api';
+import { updateCachedLastReading } from '../repositories/meter-cache-repository';
 import {
   findPendingReadings,
   findPendingVerificationReadings,
@@ -67,6 +68,13 @@ export function SyncProvider({ children }: React.PropsWithChildren): React.JSX.E
           await sendReading(reading);
         }
         await markReadingAsSent(reading.id, new Date().toISOString());
+        if (reading.currentReading !== null) {
+          await updateCachedLastReading(
+            reading.meterCode,
+            reading.currentReading,
+            reading.createdAt,
+          );
+        }
       }
       await refreshPendingCount();
       await queryClient.invalidateQueries({ queryKey: ['meter'] });

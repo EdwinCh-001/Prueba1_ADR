@@ -7,6 +7,7 @@ import { findCachedMeter } from '../../repositories/meter-cache-repository';
 import { findAllReadings } from '../../repositories/reading-repository';
 import { isStoredPhotoAvailable } from '../../services/photo-storage';
 import type { Reading } from '../../types/domain';
+import { useSyncState } from '../../providers/sync-provider';
 
 function StoredPhotoPreview({ path }: { path: string }): React.JSX.Element {
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
@@ -55,11 +56,12 @@ const verificationLabels: Record<Reading['verificationStatus'], string> = {
 
 export default function PendingScreen(): React.JSX.Element {
   const { setMeter, setEditingReading } = useReading();
+  const { pendingCount } = useSyncState();
   const [readings, setReadings] = useState<Reading[]>([]);
 
   useEffect(() => {
     void findAllReadings().then(setReadings);
-  }, []);
+  }, [pendingCount]);
 
   const editReading = async (reading: Reading): Promise<void> => {
     if (reading.syncStatus === 'enviada') {
@@ -105,16 +107,16 @@ export default function PendingScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  button: { backgroundColor: '#0B6E69', borderRadius: 10, marginTop: 12, padding: 14 },
+  button: { backgroundColor: '#059669', borderRadius: 10, marginTop: 12, minHeight: 48, justifyContent: 'center', padding: 14 },
   buttonText: { color: '#FFFFFF', fontWeight: '700', textAlign: 'center' },
-  card: { backgroundColor: '#F2F4F7', borderRadius: 12, gap: 6, marginTop: 14, padding: 16 },
-  cardTitle: { fontSize: 18, fontWeight: '800' },
-  container: { padding: 28, paddingTop: 48 },
-  empty: { color: '#667085', marginTop: 20 },
-  eyebrow: { color: '#0B6E69', fontSize: 13, fontWeight: '800', letterSpacing: 1 },
-  secondaryButton: { borderColor: '#0B6E69', borderRadius: 10, borderWidth: 1, marginTop: 24, padding: 14 },
-  secondaryButtonText: { color: '#0B6E69', fontWeight: '700', textAlign: 'center' },
-  photo: { alignSelf: 'flex-start', borderRadius: 8, height: 180, marginTop: 8, width: '100%' },
-  photoStatus: { color: '#667085', fontSize: 12, marginTop: 8 },
-  title: { color: '#101828', fontSize: 28, fontWeight: '800', marginTop: 8 },
+  card: { backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', borderRadius: 12, borderWidth: 1, elevation: 2, gap: 8, marginTop: 14, padding: 16, shadowColor: '#0F172A', shadowOffset: { height: 2, width: 0 }, shadowOpacity: 0.04, shadowRadius: 6 },
+  cardTitle: { color: '#004B87', fontSize: 18, fontWeight: '800' },
+  container: { backgroundColor: '#F8FAFC', flexGrow: 1, padding: 22, paddingBottom: 36, paddingTop: 28 },
+  empty: { color: '#64748B', marginTop: 20 },
+  eyebrow: { color: '#004B87', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  secondaryButton: { backgroundColor: '#FFFFFF', borderColor: '#004B87', borderRadius: 10, borderWidth: 1, marginTop: 20, minHeight: 48, justifyContent: 'center', padding: 14 },
+  secondaryButtonText: { color: '#004B87', fontWeight: '700', textAlign: 'center' },
+  photo: { alignSelf: 'flex-start', borderRadius: 10, height: 200, marginTop: 8, width: '100%' },
+  photoStatus: { color: '#64748B', fontSize: 12, marginTop: 8 },
+  title: { color: '#0F172A', fontSize: 27, fontWeight: '900', marginTop: 8 },
 });

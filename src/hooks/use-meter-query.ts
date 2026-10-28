@@ -37,6 +37,7 @@ export const useMeterQuery = (code: string) => {
     queryFn: ({ signal }) => getMeter(validCode, signal),
     enabled: parsedCode.success,
     networkMode: 'always',
+    retry: 1,
     staleTime: CACHE_MAX_AGE_MS,
     gcTime: 24 * 60 * 60 * 1000,
   });

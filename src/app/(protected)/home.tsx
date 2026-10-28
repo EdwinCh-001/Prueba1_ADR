@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useSession } from '../../context/session-context';
 import { useReading } from '../../context/reading-context';
@@ -141,46 +141,57 @@ export default function HomeScreen(): React.JSX.Element {
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.eyebrow}>JORNADA ACTIVA</Text>
-      <Text style={styles.title}>Hola, {session?.employeeCode}</Text>
-      <Text style={styles.subtitle}>Consulta un medidor para comenzar el registro.</Text>
+      <View style={styles.header}>
+        <Image accessibilityLabel="Logo de EPMAPS Agua de Quito" resizeMode="contain" source={require('../../../assets/Logo.jpg')} style={styles.logo} />
+        <View style={styles.greeting}>
+          <Text style={styles.eyebrow}>JORNADA ACTIVA</Text>
+          <Text style={styles.title}>Hola, {session?.employeeCode}</Text>
+          <Text style={styles.subtitle}>Listo para registrar lecturas en campo.</Text>
+        </View>
+      </View>
+      <View style={styles.accent} />
 
-      <Controller
-        control={control}
-        name="code"
-        rules={{ validate: (value) => meterCodeSchema.safeParse(value.trim()).success || 'Usa el formato MED-123456' }}
-        render={({ field: { onBlur, onChange, value } }) => (
-          <TextInput
-            autoCapitalize="characters"
-            autoCorrect={false}
-            onBlur={onBlur}
-            onChangeText={(text) => {
-              onChange(text);
-              setMeterCode('');
-            }}
-            placeholder="MED-123456"
-            style={styles.input}
-            value={value}
-          />
-        )}
-      />
-      {errors.code ? <Text style={styles.error}>{errors.code.message}</Text> : null}
-      <Pressable onPress={handleSubmit(submitMeterCode)} style={styles.button}>
-        <Text style={styles.buttonText}>Consultar medidor</Text>
-      </Pressable>
+      <View style={styles.searchCard}>
+        <Text style={styles.sectionTitle}>Consultar medidor</Text>
+        <Text style={styles.sectionSubtitle}>Ingresa el código de la etiqueta del medidor.</Text>
+        <Controller
+          control={control}
+          name="code"
+          rules={{ validate: (value) => meterCodeSchema.safeParse(value.trim()).success || 'Usa el formato MED-123456' }}
+          render={({ field: { onBlur, onChange, value } }) => (
+            <TextInput
+              autoCapitalize="characters"
+              autoCorrect={false}
+              onBlur={onBlur}
+              onChangeText={(text) => {
+                onChange(text);
+                setMeterCode('');
+              }}
+              placeholder="MED-123456"
+              placeholderTextColor="#94A3B8"
+              style={styles.input}
+              value={value}
+            />
+          )}
+        />
+        {errors.code ? <Text style={styles.error}>{errors.code.message}</Text> : null}
+        <Pressable onPress={handleSubmit(submitMeterCode)} style={styles.button}>
+          <Text style={styles.buttonText}>Consultar medidor</Text>
+        </Pressable>
+      </View>
 
       {meterQuery.isFetching ? <Text style={styles.status}>Consultando...</Text> : null}
       {meterQuery.isError ? <Text style={styles.error}>{meterQuery.error.message}</Text> : null}
       {visibleMeter ? (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{visibleMeter.code}</Text>
-          <Text>Dirección: {visibleMeter.address}</Text>
-          <Text>Sector: {visibleMeter.sector}</Text>
-          <Text>Número de cuenta: {visibleMeter.accountNumber}</Text>
-          <Text>Estado: {visibleMeter.status}</Text>
-          <Text>Última lectura: {visibleMeter.previousReading}</Text>
-          <Text>Fecha: {visibleMeter.previousReadingDate}</Text>
-          <Text>Promedio mensual: {visibleMeter.monthlyAverage}</Text>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Dirección</Text><Text style={styles.detailValue}>{visibleMeter.address}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Sector</Text><Text style={styles.detailValue}>{visibleMeter.sector}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Número de cuenta</Text><Text style={styles.detailValue}>{visibleMeter.accountNumber}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Estado</Text><Text style={styles.detailValue}>{visibleMeter.status}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Última lectura</Text><Text style={styles.detailValue}>{visibleMeter.previousReading}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Fecha</Text><Text style={styles.detailValue}>{visibleMeter.previousReadingDate}</Text></View>
+          <View style={styles.detailRow}><Text style={styles.detailLabel}>Promedio mensual</Text><Text style={styles.detailValue}>{visibleMeter.monthlyAverage}</Text></View>
           <Pressable
             onPress={() => {
               setMeter(visibleMeter);
@@ -204,26 +215,29 @@ export default function HomeScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  button: {
-    alignItems: 'center',
-    borderColor: '#0B6E69',
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 28,
-    padding: 15,
-  },
-  buttonText: { color: '#0B6E69', fontWeight: '700' },
-  card: { backgroundColor: '#F2F4F7', borderRadius: 12, gap: 8, marginTop: 20, padding: 16 },
-  cardTitle: { fontSize: 18, fontWeight: '800', marginBottom: 4 },
-  container: { flexGrow: 1, padding: 28, paddingTop: 64 },
-  eyebrow: { color: '#0B6E69', fontSize: 13, fontWeight: '800', letterSpacing: 1 },
-  error: { color: '#B42318', marginTop: 6 },
-  input: { borderColor: '#D0D5DD', borderRadius: 10, borderWidth: 1, fontSize: 16, marginTop: 20, padding: 14 },
-  subtitle: { color: '#667085', fontSize: 16, lineHeight: 24, marginTop: 10 },
-  status: { color: '#667085', marginTop: 12 },
-  startButton: { backgroundColor: '#0B6E69', borderRadius: 10, marginTop: 12, padding: 14 },
+  accent: { backgroundColor: '#10B981', borderRadius: 2, height: 4, marginBottom: 24, marginTop: 4, width: 48 },
+  button: { alignItems: 'center', backgroundColor: '#059669', borderRadius: 10, marginTop: 18, minHeight: 52, justifyContent: 'center', paddingHorizontal: 16 },
+  buttonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  card: { backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', borderRadius: 14, borderWidth: 1, elevation: 2, gap: 11, marginTop: 18, padding: 18, shadowColor: '#0F172A', shadowOffset: { height: 3, width: 0 }, shadowOpacity: 0.05, shadowRadius: 8 },
+  cardTitle: { color: '#004B87', fontSize: 19, fontWeight: '800', marginBottom: 4 },
+  container: { backgroundColor: '#F8FAFC', flexGrow: 1, padding: 22, paddingBottom: 36, paddingTop: 28 },
+  detailLabel: { color: '#64748B', flex: 1, fontSize: 13 },
+  detailRow: { borderBottomColor: '#F1F5F9', borderBottomWidth: 1, flexDirection: 'row', gap: 12, paddingBottom: 8 },
+  detailValue: { color: '#0F172A', flex: 1.2, fontSize: 14, fontWeight: '600' },
+  eyebrow: { color: '#004B87', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  error: { color: '#B42318', fontSize: 13, marginTop: 7 },
+  greeting: { flex: 1 },
+  header: { alignItems: 'center', flexDirection: 'row', gap: 14, marginBottom: 12 },
+  input: { backgroundColor: '#FFFFFF', borderColor: '#CBD5E1', borderRadius: 10, borderWidth: 1, color: '#0F172A', fontSize: 17, minHeight: 54, marginTop: 20, paddingHorizontal: 14 },
+  logo: { height: 64, width: 112 },
+  searchCard: { backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', borderRadius: 14, borderWidth: 1, padding: 18 },
+  sectionSubtitle: { color: '#64748B', fontSize: 14, lineHeight: 20, marginTop: 5 },
+  sectionTitle: { color: '#0F172A', fontSize: 19, fontWeight: '800' },
+  startButton: { backgroundColor: '#059669', borderRadius: 10, marginTop: 8, minHeight: 50, justifyContent: 'center', padding: 14 },
   startButtonText: { color: '#FFFFFF', fontWeight: '700', textAlign: 'center' },
-  secondaryButton: { borderColor: '#0B6E69', borderRadius: 10, borderWidth: 1, marginTop: 16, padding: 14 },
-  secondaryButtonText: { color: '#0B6E69', fontWeight: '700', textAlign: 'center' },
-  title: { color: '#101828', fontSize: 30, fontWeight: '800', marginTop: 8 },
+  status: { color: '#64748B', marginTop: 12 },
+  subtitle: { color: '#64748B', fontSize: 14, lineHeight: 20, marginTop: 5 },
+  secondaryButton: { backgroundColor: '#FFFFFF', borderColor: '#004B87', borderRadius: 10, borderWidth: 1, marginTop: 14, minHeight: 50, justifyContent: 'center', padding: 14 },
+  secondaryButtonText: { color: '#004B87', fontWeight: '700', textAlign: 'center' },
+  title: { color: '#0F172A', fontSize: 25, fontWeight: '800', marginTop: 5 },
 });

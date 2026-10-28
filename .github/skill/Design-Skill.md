@@ -77,12 +77,12 @@ Debe verse elegante y profesional.
 
 Color principal:
 
-- Azul institucional derivado del logo
+- Azul institucional (#004B87) derivado del logo
 
 Colores secundarios:
 
-- Blanco
-- Grises suaves
+- Blanco (#FFFFFF)
+- Grises suaves (#F8FAFC, #64748B)
 - Gris claro para superficies
 
 Utilizar la línea multicolor del logo únicamente como detalle visual.
@@ -100,7 +100,7 @@ No utilizar la franja multicolor de forma dominante.
 
 # Botones
 
-Los botones principales deben usar tonos verdes modernos.
+Los botones principales deben usar tonos verdes modernos (#059669 / #10B981).
 
 Características:
 
@@ -149,13 +149,9 @@ Generar una primera impresión profesional.
 Implementar:
 
 - logo institucional en la parte superior
-- bienvenida clara
-- formulario contenido dentro de una tarjeta elegante
+- bienvenida clara con el subtítulo: *"Aplicación oficial para técnicos de EPMAPS"*
+- formulario contenido dentro de una tarjeta elegante con fondo blanco y sombra sutil
 - diseño limpio y centrado
-
-La pantalla debe transmitir:
-
-"Aplicación oficial para técnicos de EPMAPS."
 
 ---
 
@@ -167,7 +163,7 @@ Parecer un panel operativo.
 
 Implementar:
 
-- saludo más visual
+- saludo más visual y ordenado
 - mejor jerarquía para la búsqueda de medidor
 - tarjeta para información del medidor
 - mejor organización del contenido
@@ -189,11 +185,11 @@ Facilitar el trabajo en campo.
 
 Implementar:
 
-- secciones claramente separadas
+- secciones claramente separadas mediante tarjetas limpias
 - mejor visualización del estado del medidor
-- consumo calculado destacado
+- consumo calculado destacado con tipografía grande y alto contraste
 - advertencias elegantes para consumo anómalo
-- mejor presentación de la fotografía
+- mejor presentación de la fotografía del medidor
 
 Toda la funcionalidad debe permanecer exactamente igual.
 
@@ -209,9 +205,9 @@ Debe sentirse parte de la identidad visual de la aplicación.
 
 Mostrar claramente:
 
-- conectado
-- sin conexión
-- cantidad de pendientes
+- conectado (verde)
+- sin conexión (rojo/alerta)
+- cantidad de pendientes (contador destacado)
 
 ---
 
@@ -219,12 +215,12 @@ Mostrar claramente:
 
 Unificar:
 
-- radios de borde
+- radios de borde (8px - 12px)
 - colores
 - tarjetas
 - botones
 - inputs
-- espaciados
+- espaciados (16px / 24px)
 - tamaños de texto
 
 Toda la aplicación debe parecer diseñada como un único producto.

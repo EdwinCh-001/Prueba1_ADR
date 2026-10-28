@@ -283,31 +283,33 @@ export default function RegisterScreen(): React.JSX.Element {
       <Text style={styles.title}>{meter.code}</Text>
       <Text style={styles.subtitle}>Lectura anterior: {meter.previousReading}</Text>
 
-      <Text style={styles.label}>Estado del medidor</Text>
-      <View style={styles.options}>
-        {(Object.keys(meterStatusLabels) as ReadingForm['meterStatus'][]).map((status) => (
-          <Controller
-            control={control}
-            key={status}
-            name="meterStatus"
-            render={({ field: { onChange, value } }) => (
-              <Pressable
-                onPress={() => {
-                  onChange(status);
-                }}
-                style={[styles.option, value === status && styles.selectedOption]}
-              >
-                <Text style={value === status ? styles.selectedOptionText : styles.optionText}>
-                  {meterStatusLabels[status]}
-                </Text>
-              </Pressable>
-            )}
-          />
-        ))}
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>Estado del medidor</Text>
+        <Text style={styles.sectionSubtitle}>Selecciona la condición observada en campo.</Text>
+        <View style={styles.options}>
+          {(Object.keys(meterStatusLabels) as ReadingForm['meterStatus'][]).map((status) => (
+            <Controller
+              control={control}
+              key={status}
+              name="meterStatus"
+              render={({ field: { onChange, value } }) => (
+                <Pressable
+                  onPress={() => onChange(status)}
+                  style={[styles.option, value === status && styles.selectedOption]}
+                >
+                  <Text style={value === status ? styles.selectedOptionText : styles.optionText}>
+                    {meterStatusLabels[status]}
+                  </Text>
+                </Pressable>
+              )}
+            />
+          ))}
+        </View>
       </View>
 
       {meterStatus !== 'inaccesible' ? (
-        <>
+        <View style={styles.formCard}>
+          <Text style={styles.sectionTitle}>Lectura y consumo</Text>
           <Text style={styles.label}>Lectura actual</Text>
           <Controller
             control={control}
@@ -326,24 +328,34 @@ export default function RegisterScreen(): React.JSX.Element {
             )}
           />
           {errors.currentReading ? <Text style={styles.error}>{errors.currentReading.message}</Text> : null}
-          {consumption !== null ? <Text style={styles.info}>Consumo calculado: {consumption}</Text> : null}
+          {consumption !== null ? (
+            <View style={styles.consumptionCard}>
+              <Text style={styles.consumptionLabel}>CONSUMO CALCULADO</Text>
+              <Text style={styles.consumptionValue}>{consumption}</Text>
+              <Text style={styles.consumptionUnit}>unidades</Text>
+            </View>
+          ) : null}
           {isAnomalous ? (
             <Controller
               control={control}
               name="anomalyConfirmed"
               render={({ field: { onChange, value } }) => (
                 <Pressable onPress={() => onChange(!value)} style={styles.confirmation}>
-                  <Text style={styles.warning}>Consumo anómalo: supera tres veces el promedio mensual.</Text>
-                  <Text>{value ? '✓ Confirmo que revisé el medidor' : 'Toca para confirmar la revisión'}</Text>
+                  <Text style={styles.warning}>Consumo anómalo</Text>
+                  <Text style={styles.warningDescription}>Supera tres veces el promedio mensual.</Text>
+                  <Text style={styles.confirmationText}>
+                    {value ? '✓ Confirmo que revisé el medidor' : 'Toca para confirmar la revisión'}
+                  </Text>
                 </Pressable>
               )}
             />
           ) : null}
-        </>
+        </View>
       ) : null}
 
       {meterStatus === 'inaccesible' ? (
-        <>
+        <View style={styles.formCard}>
+          <Text style={styles.sectionTitle}>Visita sin lectura</Text>
           <Text style={styles.label}>Motivo de inaccesibilidad</Text>
           <Controller
             control={control}
@@ -360,11 +372,12 @@ export default function RegisterScreen(): React.JSX.Element {
             )}
           />
           {errors.reason ? <Text style={styles.error}>{errors.reason.message}</Text> : null}
-        </>
+        </View>
       ) : null}
 
       {meterStatus === 'danado' ? (
-        <>
+        <View style={styles.formCard}>
+          <Text style={styles.sectionTitle}>Detalle del daño</Text>
           <Text style={styles.label}>Descripción del daño</Text>
           <Controller
             control={control}
@@ -381,14 +394,14 @@ export default function RegisterScreen(): React.JSX.Element {
             )}
           />
           {errors.damageDescription ? <Text style={styles.error}>{errors.damageDescription.message}</Text> : null}
-        </>
+        </View>
       ) : null}
 
       <Controller
         control={control}
         name="photoPath"
         render={({ field: { onChange, value } }) => (
-          <View style={styles.photoSection}>
+          <View style={[styles.formCard, styles.photoSection]}>
             <Text style={styles.label}>
               Fotografía del medidor{photoRequired ? ' (obligatoria)' : ' (opcional)'}
             </Text>
@@ -489,29 +502,38 @@ export default function RegisterScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  button: { alignItems: 'center', backgroundColor: '#0B6E69', borderRadius: 12, marginTop: 28, padding: 16 },
-  buttonText: { color: '#FFFFFF', fontWeight: '700' },
-  cancelButton: { alignItems: 'center', marginTop: 14, padding: 12 },
-  cancelText: { color: '#0B6E69', fontWeight: '700' },
-  centered: { flex: 1, justifyContent: 'center', padding: 28 },
-  confirmation: { backgroundColor: '#FFF4E5', borderRadius: 10, gap: 8, marginTop: 16, padding: 14 },
-  container: { padding: 28, paddingBottom: 48, paddingTop: 64 },
-  error: { color: '#B42318', marginTop: 6 },
-  eyebrow: { color: '#0B6E69', fontSize: 13, fontWeight: '800', letterSpacing: 1 },
-  info: { color: '#344054', marginTop: 12 },
-  input: { borderColor: '#D0D5DD', borderRadius: 10, borderWidth: 1, fontSize: 16, marginTop: 8, padding: 14 },
-  label: { color: '#344054', fontWeight: '600', marginTop: 22 },
-  multiline: { minHeight: 90, textAlignVertical: 'top' },
-  option: { borderColor: '#D0D5DD', borderRadius: 10, borderWidth: 1, flex: 1, padding: 12 },
-  optionText: { color: '#344054', textAlign: 'center' },
-  options: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  photoSection: { marginTop: 4 },
-  photoPreview: { alignSelf: 'flex-start', borderRadius: 10, height: 190, marginTop: 12, width: '100%' },
-  secondaryButton: { borderColor: '#0B6E69', borderRadius: 10, borderWidth: 1, marginTop: 8, padding: 14 },
-  secondaryText: { color: '#0B6E69', fontWeight: '700', textAlign: 'center' },
-  selectedOption: { backgroundColor: '#E6F4F1', borderColor: '#0B6E69' },
-  selectedOptionText: { color: '#0B6E69', fontWeight: '700', textAlign: 'center' },
-  subtitle: { color: '#667085', marginTop: 8 },
-  title: { color: '#101828', fontSize: 28, fontWeight: '800', marginTop: 6 },
-  warning: { color: '#B54708', fontWeight: '700' },
+  button: { alignItems: 'center', backgroundColor: '#059669', borderRadius: 11, marginTop: 22, minHeight: 54, justifyContent: 'center', padding: 16 },
+  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  cancelButton: { alignItems: 'center', marginTop: 10, minHeight: 48, justifyContent: 'center', padding: 12 },
+  cancelText: { color: '#64748B', fontWeight: '700' },
+  centered: { backgroundColor: '#F8FAFC', flex: 1, justifyContent: 'center', padding: 24 },
+  confirmation: { backgroundColor: '#FFF7ED', borderColor: '#FDBA74', borderRadius: 11, borderWidth: 1, gap: 7, marginTop: 16, padding: 16 },
+  confirmationText: { color: '#7C2D12', fontWeight: '700', marginTop: 4 },
+  consumptionCard: { alignItems: 'center', backgroundColor: '#EFF6FF', borderColor: '#BFDBFE', borderRadius: 12, borderWidth: 1, marginTop: 16, padding: 16 },
+  consumptionLabel: { color: '#004B87', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  consumptionUnit: { color: '#64748B', fontSize: 13, marginTop: 2 },
+  consumptionValue: { color: '#004B87', fontSize: 36, fontWeight: '900', marginTop: 4 },
+  container: { backgroundColor: '#F8FAFC', padding: 22, paddingBottom: 42, paddingTop: 28 },
+  error: { color: '#B42318', fontSize: 13, marginTop: 7 },
+  eyebrow: { color: '#004B87', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  formCard: { backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', borderRadius: 14, borderWidth: 1, elevation: 2, marginTop: 18, padding: 18, shadowColor: '#0F172A', shadowOffset: { height: 3, width: 0 }, shadowOpacity: 0.05, shadowRadius: 8 },
+  info: { color: '#64748B', fontSize: 14, lineHeight: 20, marginTop: 10 },
+  input: { backgroundColor: '#FFFFFF', borderColor: '#CBD5E1', borderRadius: 10, borderWidth: 1, color: '#0F172A', fontSize: 17, minHeight: 54, marginTop: 8, paddingHorizontal: 14 },
+  label: { color: '#334155', fontSize: 14, fontWeight: '700', marginTop: 18 },
+  multiline: { minHeight: 96, paddingTop: 14, textAlignVertical: 'top' },
+  option: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#CBD5E1', borderRadius: 10, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 48, padding: 10 },
+  optionText: { color: '#334155', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  options: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  photoSection: { marginTop: 18 },
+  photoPreview: { alignSelf: 'flex-start', borderRadius: 10, height: 200, marginTop: 12, width: '100%' },
+  secondaryButton: { backgroundColor: '#F8FAFC', borderColor: '#004B87', borderRadius: 10, borderWidth: 1, marginTop: 12, minHeight: 50, justifyContent: 'center', padding: 14 },
+  secondaryText: { color: '#004B87', fontWeight: '700', textAlign: 'center' },
+  sectionSubtitle: { color: '#64748B', fontSize: 14, lineHeight: 20, marginTop: 5 },
+  sectionTitle: { color: '#0F172A', fontSize: 18, fontWeight: '800' },
+  selectedOption: { backgroundColor: '#EFF6FF', borderColor: '#004B87' },
+  selectedOptionText: { color: '#004B87', fontWeight: '800', textAlign: 'center' },
+  subtitle: { color: '#64748B', fontSize: 15, marginTop: 6 },
+  title: { color: '#0F172A', fontSize: 28, fontWeight: '900', marginTop: 6 },
+  warning: { color: '#9A3412', fontSize: 16, fontWeight: '800' },
+  warningDescription: { color: '#9A3412', fontSize: 14, lineHeight: 20 },
 });

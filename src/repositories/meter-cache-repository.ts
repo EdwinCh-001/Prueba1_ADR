@@ -61,3 +61,17 @@ export const saveCachedMeter = async (meter: Meter, cachedAt: string): Promise<v
     cachedAt,
   );
 };
+
+export const updateCachedLastReading = async (
+  code: string,
+  reading: number,
+  date: string,
+): Promise<void> => {
+  const database = await getDatabase();
+  await database.runAsync(
+    'UPDATE medidores_cache SET ultima_lectura = ?, fecha_ultima_lectura = ? WHERE codigo = ?',
+    reading,
+    date,
+    code,
+  );
+};
