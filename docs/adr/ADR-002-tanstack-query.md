@@ -42,6 +42,8 @@ SQLite continúa siendo el mecanismo oficial de persistencia local definido en e
 
 Las configuraciones de vigencia y reutilización de datos serán controladas mediante las opciones propias de TanStack Query, manteniendo una separación clara entre la gestión de datos remotos y la persistencia local.
 
+Las consultas de medidores utilizarán una queryKey basada en el código del medidor para garantizar la reutilización correcta de resultados.
+
 ## Consecuencias
 
 - Se reduce la cantidad de código necesario para gestionar estados de carga, éxito y error.

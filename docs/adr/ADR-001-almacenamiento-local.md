@@ -37,7 +37,7 @@ Se usan dos almacenes, cada uno para lo que hace mejor.
 
 **expo-sqlite** guarda los datos de trabajo:
 
-- Tabla `lecturas`: `id` (UUID generado en el cliente, clave primaria), `medidor_codigo`, `periodo` (AAAA-MM), estado del medidor, lectura actual, lectura anterior, consumo, motivo o descripción, ruta de la foto y estado de envío (`pendiente` o `enviada`).
+- Tabla `lecturas`: `id` (UUID generado en el cliente mediante crypto.randomUUID(), clave primaria), `medidor_codigo`, `periodo` (AAAA-MM), estado del medidor, lectura actual, lectura anterior, consumo, motivo o descripción, ruta de la foto y estado de envío (`pendiente` o `enviada`).
 - Índice único sobre (`medidor_codigo`, `periodo`) para rechazar el segundo registro del mismo medidor en el mismo mes (R10).
 - El `id` generado en el cliente permite, antes de enviar, comprobar si la lectura ya llegó al sistema de la oficina, y evitar duplicados si la señal se corta a mitad del envío (R9).
 - Tabla `medidores_cache`: código y datos del medidor con la fecha de consulta (R3).
