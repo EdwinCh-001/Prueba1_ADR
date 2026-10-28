@@ -27,7 +27,7 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Se necesita la cámara para fotografiar un medidor dañado o documentar un consumo anómalo.",
+          "cameraPermission": "Se necesita la cámara para adjuntar fotografías de respaldo a las lecturas; es obligatoria para medidores dañados o consumos anómalos.",
           "microphonePermission": false
         }
       ]

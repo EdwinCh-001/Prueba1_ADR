@@ -23,6 +23,7 @@ export default function HomeScreen(): React.JSX.Element {
     defaultValues: { code: '' },
   });
   const meterQuery = useMeterQuery(meterCode);
+  const visibleMeter = meterQuery.data?.code === meterCode ? meterQuery.data : null;
 
   useEffect(() => {
     if (!session) {
@@ -153,7 +154,10 @@ export default function HomeScreen(): React.JSX.Element {
             autoCapitalize="characters"
             autoCorrect={false}
             onBlur={onBlur}
-            onChangeText={onChange}
+            onChangeText={(text) => {
+              onChange(text);
+              setMeterCode('');
+            }}
             placeholder="MED-123456"
             style={styles.input}
             value={value}
@@ -167,19 +171,19 @@ export default function HomeScreen(): React.JSX.Element {
 
       {meterQuery.isFetching ? <Text style={styles.status}>Consultando...</Text> : null}
       {meterQuery.isError ? <Text style={styles.error}>{meterQuery.error.message}</Text> : null}
-      {meterQuery.data ? (
+      {visibleMeter ? (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>{meterQuery.data.code}</Text>
-          <Text>Dirección: {meterQuery.data.address}</Text>
-          <Text>Sector: {meterQuery.data.sector}</Text>
-          <Text>Número de cuenta: {meterQuery.data.accountNumber}</Text>
-          <Text>Estado: {meterQuery.data.status}</Text>
-          <Text>Última lectura: {meterQuery.data.previousReading}</Text>
-          <Text>Fecha: {meterQuery.data.previousReadingDate}</Text>
-          <Text>Promedio mensual: {meterQuery.data.monthlyAverage}</Text>
+          <Text style={styles.cardTitle}>{visibleMeter.code}</Text>
+          <Text>Dirección: {visibleMeter.address}</Text>
+          <Text>Sector: {visibleMeter.sector}</Text>
+          <Text>Número de cuenta: {visibleMeter.accountNumber}</Text>
+          <Text>Estado: {visibleMeter.status}</Text>
+          <Text>Última lectura: {visibleMeter.previousReading}</Text>
+          <Text>Fecha: {visibleMeter.previousReadingDate}</Text>
+          <Text>Promedio mensual: {visibleMeter.monthlyAverage}</Text>
           <Pressable
             onPress={() => {
-              setMeter(meterQuery.data);
+              setMeter(visibleMeter);
               router.push('/register');
             }}
             style={styles.startButton}
@@ -211,7 +215,7 @@ const styles = StyleSheet.create({
   buttonText: { color: '#0B6E69', fontWeight: '700' },
   card: { backgroundColor: '#F2F4F7', borderRadius: 12, gap: 8, marginTop: 20, padding: 16 },
   cardTitle: { fontSize: 18, fontWeight: '800', marginBottom: 4 },
-  container: { flex: 1, padding: 28, paddingTop: 64 },
+  container: { flexGrow: 1, padding: 28, paddingTop: 64 },
   eyebrow: { color: '#0B6E69', fontSize: 13, fontWeight: '800', letterSpacing: 1 },
   error: { color: '#B42318', marginTop: 6 },
   input: { borderColor: '#D0D5DD', borderRadius: 10, borderWidth: 1, fontSize: 16, marginTop: 20, padding: 14 },

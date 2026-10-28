@@ -1,8 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { meterStatusLabels, useReading } from '../../context/reading-context';
 import { useSession } from '../../context/session-context';
@@ -65,6 +65,15 @@ export default function RegisterScreen(): React.JSX.Element {
     && meter
     ? currentReading - meter.previousReading
     : null;
+  const photoRequired = meter
+    ? isPhotoRequired(
+      meterStatus,
+      meterStatus === 'inaccesible' ? null : currentReading,
+      meter.previousReading,
+      meter.monthlyAverage,
+    )
+    : false;
+  const [photoCheck, setPhotoCheck] = useState<{ path: string; available: boolean } | null>(null);
   const isAnomalous = meter
     ? isAnomalousConsumption(
       meterStatus === 'inaccesible' ? null : currentReading,
@@ -72,6 +81,29 @@ export default function RegisterScreen(): React.JSX.Element {
       meter.monthlyAverage,
     )
     : false;
+
+  useEffect(() => {
+    if (!photoPath) {
+      return;
+    }
+
+    let active = true;
+    void isStoredPhotoAvailable(photoPath)
+      .then((available) => {
+        if (active) {
+          setPhotoCheck({ path: photoPath, available });
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setPhotoCheck({ path: photoPath, available: false });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [photoPath]);
 
   useEffect(() => {
     if (!meter || !session) {
@@ -135,13 +167,6 @@ export default function RegisterScreen(): React.JSX.Element {
       meter.previousReading,
       meter.monthlyAverage,
     );
-    const photoRequired = isPhotoRequired(
-      value.meterStatus,
-      readingValue,
-      meter.previousReading,
-      meter.monthlyAverage,
-    );
-
     if (anomalous && !value.anomalyConfirmed) {
       Alert.alert('Consumo anómalo', 'Debes confirmar que revisaste el medidor.');
       return;
@@ -156,7 +181,7 @@ export default function RegisterScreen(): React.JSX.Element {
       return;
     }
 
-    let storedPhotoPath = photoRequired ? value.photoPath : null;
+    let storedPhotoPath = value.photoPath;
     if (storedPhotoPath) {
       try {
         const photoAvailable = await isStoredPhotoAvailable(storedPhotoPath);
@@ -236,9 +261,6 @@ export default function RegisterScreen(): React.JSX.Element {
     if (editingReading) {
       await deleteDraft(session.employeeCode);
     }
-    if (!photoRequired && value.photoPath) {
-      await deleteStoredPhoto(value.photoPath);
-    }
     await refreshPendingCount();
     if (isConnected) {
       void synchronize();
@@ -270,7 +292,9 @@ export default function RegisterScreen(): React.JSX.Element {
             name="meterStatus"
             render={({ field: { onChange, value } }) => (
               <Pressable
-                onPress={() => onChange(status)}
+                onPress={() => {
+                  onChange(status);
+                }}
                 style={[styles.option, value === status && styles.selectedOption]}
               >
                 <Text style={value === status ? styles.selectedOptionText : styles.optionText}>
@@ -292,7 +316,9 @@ export default function RegisterScreen(): React.JSX.Element {
               <TextInput
                 keyboardType="decimal-pad"
                 onBlur={onBlur}
-                onChangeText={onChange}
+                onChangeText={(text) => {
+                  onChange(text);
+                }}
                 placeholder="Ej. 135"
                 style={styles.input}
                 value={value}
@@ -358,76 +384,99 @@ export default function RegisterScreen(): React.JSX.Element {
         </>
       ) : null}
 
-      {isPhotoRequired(
-        meterStatus,
-        meterStatus === 'inaccesible' ? null : currentReading,
-        meter.previousReading,
-        meter.monthlyAverage,
-      ) ? (
-        <Controller
-          control={control}
-          name="photoPath"
-          render={({ field: { onChange, value } }) => (
-            <View style={styles.photoSection}>
-              <Text style={styles.label}>Fotografía obligatoria del medidor</Text>
-              <Text style={styles.info}>
-                Se requiere porque el medidor está dañado o el consumo es anómalo.
-              </Text>
-              <Pressable
-                onPress={async () => {
-                  try {
-                    const result = await captureMeterPhoto();
-                    if (result.denied) {
+      <Controller
+        control={control}
+        name="photoPath"
+        render={({ field: { onChange, value } }) => (
+          <View style={styles.photoSection}>
+            <Text style={styles.label}>
+              Fotografía del medidor{photoRequired ? ' (obligatoria)' : ' (opcional)'}
+            </Text>
+            <Text style={styles.info}>
+              {photoRequired
+                ? 'Se requiere para medidores dañados o consumos anómalos.'
+                : 'Puedes adjuntar una foto como respaldo; también puedes continuar sin ella.'}
+            </Text>
+            <Pressable
+              onPress={async () => {
+                try {
+                  const result = await captureMeterPhoto();
+                  if (result.denied) {
+                    Alert.alert(
+                      'Permiso de cámara denegado',
+                      photoRequired
+                        ? 'La cámara es necesaria para fotografiar un medidor dañado o documentar un consumo anómalo. Sin esa foto obligatoria no se puede guardar el registro. Habilita el permiso en Ajustes y vuelve a intentarlo.'
+                        : 'La cámara permite adjuntar una fotografía de respaldo. En este registro la foto es opcional, por lo que puedes cerrar este aviso y continuar sin foto.',
+                    );
+                    return;
+                  }
+                  if (result.path) {
+                    try {
+                      await saveDraft({
+                        employeeCode: session.employeeCode,
+                        meterCode: meter.code,
+                        currentStep: 'register',
+                        payloadJson: JSON.stringify({
+                          meter,
+                          form: { ...formValues, photoPath: result.path },
+                        }),
+                        photoPath: result.path,
+                        updatedAt: new Date().toISOString(),
+                      });
+                    } catch {
+                      await deleteStoredPhoto(result.path);
                       Alert.alert(
-                        'Permiso de cámara necesario',
-                        'Se necesita la cámara para respaldar este registro de medidor dañado o consumo anómalo. Habilita el permiso de cámara en Ajustes para tomar la foto y continuar.',
+                        'No se pudo guardar el borrador',
+                        'La fotografía no quedó asociada al registro. Intenta tomarla nuevamente.',
                       );
                       return;
                     }
-                    if (result.path) {
-                      try {
-                        await saveDraft({
-                          employeeCode: session.employeeCode,
-                          meterCode: meter.code,
-                          currentStep: 'register',
-                          payloadJson: JSON.stringify({
-                            meter,
-                            form: { ...formValues, photoPath: result.path },
-                          }),
-                          photoPath: result.path,
-                          updatedAt: new Date().toISOString(),
-                        });
-                      } catch {
-                        await deleteStoredPhoto(result.path);
-                        Alert.alert(
-                          'No se pudo guardar el borrador',
-                          'La fotografía no quedó asociada al registro. Intenta tomarla nuevamente.',
-                        );
-                        return;
-                      }
-                      if (photoPath && photoPath !== result.path) {
-                        await deleteStoredPhoto(photoPath);
-                      }
-                      onChange(result.path);
+                    if (photoPath && photoPath !== result.path) {
+                      await deleteStoredPhoto(photoPath);
                     }
-                  } catch {
-                    Alert.alert(
-                      'No se pudo guardar la foto',
-                      'No se pudo conservar la fotografía en el almacenamiento de la aplicación. Intenta nuevamente.',
-                    );
+                    onChange(result.path);
                   }
-                }}
-                style={styles.secondaryButton}
-              >
-                <Text style={styles.secondaryText}>
-                  {value ? 'Volver a tomar fotografía' : 'Tomar fotografía requerida'}
+                } catch {
+                  Alert.alert(
+                    'No se pudo guardar la foto',
+                    'No se pudo conservar la fotografía en el almacenamiento de la aplicación. Intenta nuevamente.',
+                  );
+                }
+              }}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryText}>
+                {value
+                  ? 'Volver a tomar fotografía'
+                  : photoRequired
+                    ? 'Tomar fotografía requerida'
+                    : 'Agregar fotografía (opcional)'}
+              </Text>
+            </Pressable>
+            {photoPath ? (
+              photoCheck?.path === photoPath && photoCheck.available ? (
+                <>
+                  <Text style={styles.info}>Fotografía guardada en el almacenamiento de la aplicación.</Text>
+                  <Image
+                    accessibilityLabel="Fotografía persistente del medidor"
+                    onError={() => setPhotoCheck({ path: photoPath, available: false })}
+                    source={{ uri: photoPath }}
+                    style={styles.photoPreview}
+                  />
+                </>
+              ) : photoCheck?.path === photoPath ? (
+                <Text style={photoRequired ? styles.error : styles.info}>
+                  {photoRequired
+                    ? 'La fotografía no está disponible. Debes tomarla nuevamente para guardar.'
+                    : 'La fotografía opcional no está disponible; puedes continuar sin ella.'}
                 </Text>
-              </Pressable>
-              {photoPath ? <Text style={styles.info}>Foto guardada en el teléfono.</Text> : null}
-            </View>
-          )}
-        />
-      ) : null}
+              ) : (
+                <Text style={styles.info}>Comprobando que la fotografía esté guardada...</Text>
+              )
+            ) : null}
+          </View>
+        )}
+      />
 
       <Pressable disabled={isSubmitting} onPress={handleSubmit(submit)} style={styles.button}>
         <Text style={styles.buttonText}>{isSubmitting ? 'Guardando...' : 'Guardar lectura'}</Text>
@@ -457,6 +506,7 @@ const styles = StyleSheet.create({
   optionText: { color: '#344054', textAlign: 'center' },
   options: { flexDirection: 'row', gap: 8, marginTop: 10 },
   photoSection: { marginTop: 4 },
+  photoPreview: { alignSelf: 'flex-start', borderRadius: 10, height: 190, marginTop: 12, width: '100%' },
   secondaryButton: { borderColor: '#0B6E69', borderRadius: 10, borderWidth: 1, marginTop: 8, padding: 14 },
   secondaryText: { color: '#0B6E69', fontWeight: '700', textAlign: 'center' },
   selectedOption: { backgroundColor: '#E6F4F1', borderColor: '#0B6E69' },
