@@ -219,10 +219,20 @@ Evitar consultas SQL dispersas en pantallas.
 
 Preferir:
 
-```text
-src/database/
-src/repositories/
-```
+Directory structure:
+    ├── src/
+    │   ├── global.css
+    │   ├── database/
+    │   ├── repositories/
+    │   ├── api/
+    │   ├── app/
+    │   │   ├── _layout.tsx
+    │   │   └── index.tsx
+    │   ├── hooks/
+    │   │   
+    │   └── types/
+    └── .github/
+        └── copilot-instructions.md
 
 ---
 
