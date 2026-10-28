@@ -48,7 +48,7 @@ El contexto almacenará la información necesaria para completar el proceso de r
 
 Los componentes involucrados en el registro consumirán el contexto para leer y actualizar la información sin necesidad de intercambiar datos mediante múltiples niveles de propiedades.
 
-Cuando un registro quede incompleto, la información almacenada en el contexto podrá persistirse en SQLite según lo definido en el ADR-001. Al reabrir la aplicación, el contexto será reconstruido utilizando los datos recuperados desde la base de datos.
+Cuando el técnico avanza de un paso a otro, el contenido del contexto se guarda en una tabla `borradores` de la misma base SQLite del ADR-001, con una sola fila por código de empleado. El guardado se hace en cada cambio de paso y no al cerrar la aplicación, porque quitarla de las recientes no ejecuta ningún código de cierre. Al abrir la aplicación, una vez cargada la base, si existe un borrador se ofrece al técnico continuar o descartar. Al continuar, el contexto se reconstruye con los datos guardados y se navega al paso pendiente. Al descartar, se elimina la fila del borrador y la fotografía asociada. Cuando el registro se completa, el borrador se elimina y la lectura pasa a la tabla `lecturas`.
 
 ## Consecuencias
 
@@ -56,16 +56,19 @@ Cuando un registro quede incompleto, la información almacenada en el contexto p
 - Las pantallas pueden compartir datos sin depender unas de otras.
 - El cálculo de consumo se mantiene consistente durante todo el proceso.
 - La restauración de borradores resulta más sencilla porque el contexto puede reconstruirse a partir de SQLite.
+- El borrador no es una lectura: vive en su propia tabla y no participa del índice único de `lecturas`, por lo que un registro a medias no bloquea al medidor en el mes.
 - No se introduce una dependencia adicional para gestión de estado global.
 - Un uso incorrecto del contexto puede provocar renderizados innecesarios en componentes que no requieren actualizarse.
 - Es necesario inicializar correctamente el contexto antes de mostrar pantallas que dependan de datos restaurados desde SQLite.
+- Guardar en cada cambio de paso agrega una escritura a SQLite por paso, y una escritura fallida podría dejar el borrador desactualizado.
 
 ## Verificación
 
 - Iniciar un registro, avanzar entre pantallas y verificar que los datos ingresados permanecen disponibles.
 - Modificar una lectura y comprobar que el consumo calculado se actualiza correctamente en todas las pantallas relacionadas.
-- Guardar un registro incompleto, cerrar la aplicación y volver a abrirla: los datos deben recuperarse correctamente.
+- Avanzar hasta el segundo paso de un registro, quitar la aplicación de las recientes y abrirla de nuevo: se ofrece continuar o descartar, y al continuar los datos ingresados siguen presentes.
 - Verificar que el registro continúa desde el último paso completado.
+- Descartar un borrador y comprobar que ya no se ofrece al abrir de nuevo la aplicación.
 - Revisar que `package.json` no contiene dependencias adicionales para gestión de estado como Redux Toolkit o Zustand.
 
 ## Uso de IA

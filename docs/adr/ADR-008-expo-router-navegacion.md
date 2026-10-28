@@ -55,7 +55,7 @@ Expo Router será responsable únicamente de la navegación entre pantallas. El 
 - La integración con Expo reduce la configuración necesaria para comenzar el desarrollo.
 - Los flujos de autenticación y trabajo pueden mantenerse claramente separados.
 - La navegación hacia registros recuperados o procesos incompletos resulta más sencilla de implementar.
-- La solución introduce una dependencia adicional al proyecto.
+- Expo Router ya forma parte de la plantilla por defecto de Expo SDK 57, por lo que no se agrega ninguna dependencia
 - Los desarrolladores deben respetar las convenciones de directorios y archivos establecidas por Expo Router.
 - Una estructura de rutas mal diseñada puede dificultar el crecimiento futuro de la aplicación.
 

@@ -253,3 +253,14 @@ Antes de sugerir una nueva librería, verificar si la funcionalidad ya puede res
 - Zod
 
 Priorizar simplicidad, funcionamiento offline y compatibilidad con los ADR existentes.
+
+## Requisitos de la prueba que deben cumplirse
+
+- Consulta de medidores: leer primero `medidores_cache`; vigencia 12 horas; timeout de 10 segundos con AbortController; `gcTime` de 24 horas; conectar NetInfo con `onlineManager` de TanStack Query.
+- Borrador (R8): tabla `borradores`, una fila por código de empleado, guardada en cada cambio de paso; al abrir la aplicación ofrecer continuar o descartar.
+- Lectura registrada sin conexión (R4): marcarla como pendiente de verificar y compararla con la lectura anterior al recuperar la conexión.
+- Envío (R9): antes de enviar, consultar si ya existe una lectura con el mismo identificador del cliente; indicador de conexión y número de pendientes en el layout raíz.
+- Foto (R7): obligatoria solo con consumo mayor al triple del promedio o con medidor dañado. Si se niega el permiso de cámara, explicar el motivo y permitir continuar cuando la foto es opcional.
+- Consumo anómalo (R6): mostrar advertencia y exigir confirmación del técnico.
+- Una lectura enviada no se corrige; no se permite un segundo registro del mismo medidor en el mismo mes.
+- Instalar siempre con `npx expo install` y consultar la documentación de la versión instalada de Expo.
