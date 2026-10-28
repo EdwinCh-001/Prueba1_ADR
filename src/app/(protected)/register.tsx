@@ -6,11 +6,26 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 
 import { meterStatusLabels, useReading } from '../../context/reading-context';
 import { useSession } from '../../context/session-context';
-import { saveReading } from '../../repositories/reading-repository';
+import {
+  findReadingById,
+  saveReadingAndDeleteDraft,
+  updateReading,
+} from '../../repositories/reading-repository';
 import { deleteDraft, saveDraft } from '../../repositories/draft-repository';
-import { captureMeterPhoto } from '../../services/photo-storage';
+import {
+  captureMeterPhoto,
+  deleteStoredPhoto,
+  isStoredPhotoAvailable,
+} from '../../services/photo-storage';
 import type { ReadingForm } from '../../types/domain';
-import { readingFormSchema, readingSchema } from '../../types/schemas';
+import {
+  hasMeaningfulDraftData,
+  isAnomalousConsumption,
+  isPhotoRequired,
+  readingFormSchema,
+  readingSchema,
+} from '../../types/schemas';
+import { useSyncState } from '../../providers/sync-provider';
 
 const getPeriod = (): string => new Date().toISOString().slice(0, 7);
 const getTimestamp = (): string => new Date().toISOString();
@@ -20,28 +35,43 @@ const getClientId = (): string =>
 
 export default function RegisterScreen(): React.JSX.Element {
   const { session } = useSession();
-  const { meter, form: savedForm, clearReading } = useReading();
-  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<ReadingForm>({
-    defaultValues: savedForm ?? {
+  const { meter, form: savedForm, editingReading, clearReading } = useReading();
+  const { isConnected, refreshPendingCount, synchronize } = useSyncState();
+  const { control, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<ReadingForm>({
+    defaultValues: savedForm ?? (editingReading ? {
+      anomalyConfirmed: false,
+      currentReading: editingReading.currentReading?.toString() ?? '',
+      damageDescription: editingReading.damageDescription ?? '',
+      meterStatus: editingReading.meterStatus,
+      photoPath: editingReading.photoPath,
+      reason: editingReading.reason ?? '',
+    } : {
       anomalyConfirmed: false,
       currentReading: '',
       damageDescription: '',
       meterStatus: 'normal',
       photoPath: null,
       reason: '',
-    },
+    }),
     resolver: zodResolver(readingFormSchema),
   });
   const meterStatus = useWatch({ control, name: 'meterStatus' });
   const photoPath = useWatch({ control, name: 'photoPath' });
-  const currentReading = Number(useWatch({ control, name: 'currentReading' }));
+  const currentReadingInput = useWatch({ control, name: 'currentReading' });
+  const currentReading = currentReadingInput.trim() === '' ? null : Number(currentReadingInput);
   const formValues = useWatch({ control });
-  const consumption = Number.isFinite(currentReading) && meter
+  const consumption = meterStatus !== 'inaccesible'
+    && currentReading !== null
+    && meter
     ? currentReading - meter.previousReading
     : null;
-  const isAnomalous = consumption !== null
-    && meter !== null
-    && consumption > meter.monthlyAverage * 3;
+  const isAnomalous = meter
+    ? isAnomalousConsumption(
+      meterStatus === 'inaccesible' ? null : currentReading,
+      meter.previousReading,
+      meter.monthlyAverage,
+    )
+    : false;
 
   useEffect(() => {
     if (!meter || !session) {
@@ -49,6 +79,11 @@ export default function RegisterScreen(): React.JSX.Element {
     }
 
     if (!formValues.meterStatus) {
+      return;
+    }
+
+    if (!hasMeaningfulDraftData(formValues)) {
+      void deleteDraft(session.employeeCode);
       return;
     }
 
@@ -73,19 +108,76 @@ export default function RegisterScreen(): React.JSX.Element {
     );
   }
 
+  const cancelRegistration = async (): Promise<void> => {
+    if (session) {
+      try {
+        await deleteDraft(session.employeeCode);
+        if (!editingReading) {
+          await deleteStoredPhoto(photoPath);
+        }
+      } catch {
+        Alert.alert('No se pudo cancelar', 'No se pudo eliminar el borrador. Intenta nuevamente.');
+        return;
+      }
+    }
+    clearReading();
+    router.replace('/home');
+  };
+
   const submit = async (value: ReadingForm): Promise<void> => {
     const numericReading = value.currentReading.trim() === '' ? null : Number(value.currentReading);
-    const calculatedConsumption = numericReading === null ? null : numericReading - meter.previousReading;
-    const anomalous = calculatedConsumption !== null
-      && calculatedConsumption > meter.monthlyAverage * 3;
+    const readingValue = value.meterStatus === 'inaccesible' ? null : numericReading;
+    const calculatedConsumption = readingValue === null
+      ? null
+      : readingValue - meter.previousReading;
+    const anomalous = isAnomalousConsumption(
+      readingValue,
+      meter.previousReading,
+      meter.monthlyAverage,
+    );
+    const photoRequired = isPhotoRequired(
+      value.meterStatus,
+      readingValue,
+      meter.previousReading,
+      meter.monthlyAverage,
+    );
 
     if (anomalous && !value.anomalyConfirmed) {
       Alert.alert('Consumo anómalo', 'Debes confirmar que revisaste el medidor.');
       return;
     }
-    if ((anomalous || value.meterStatus === 'danado') && !value.photoPath) {
-      Alert.alert('Foto obligatoria', 'Debes tomar una foto para este registro.');
+    if (photoRequired && !value.photoPath) {
+      Alert.alert(
+        'Foto obligatoria',
+        value.meterStatus === 'danado'
+          ? 'Debes fotografiar el medidor dañado para guardar este registro.'
+          : 'El consumo supera tres veces el promedio mensual. Debes fotografiar el medidor para guardar este registro.',
+      );
       return;
+    }
+
+    let storedPhotoPath = photoRequired ? value.photoPath : null;
+    if (storedPhotoPath) {
+      try {
+        const photoAvailable = await isStoredPhotoAvailable(storedPhotoPath);
+        if (!photoAvailable && photoRequired) {
+          Alert.alert(
+            'Foto no disponible',
+            'La fotografía obligatoria ya no está en el almacenamiento de la aplicación. Tómala nuevamente para continuar.',
+          );
+          return;
+        }
+        if (!photoAvailable) {
+          storedPhotoPath = null;
+          setValue('photoPath', null);
+        }
+      } catch {
+        Alert.alert(
+          'No se pudo validar la foto',
+          'No se pudo comprobar el archivo de la fotografía. Intenta tomarla nuevamente.',
+        );
+        return;
+      }
     }
 
     const now = getTimestamp();
@@ -94,30 +186,73 @@ export default function RegisterScreen(): React.JSX.Element {
       meterCode: meter.code,
       period: getPeriod(),
       meterStatus: value.meterStatus,
-      currentReading: value.meterStatus === 'inaccesible' ? null : numericReading,
+      currentReading: readingValue,
       previousReading: meter.previousReading,
       consumption: value.meterStatus === 'inaccesible' ? null : calculatedConsumption,
       reason: value.meterStatus === 'inaccesible' ? value.reason.trim() : null,
       damageDescription: value.meterStatus === 'danado' ? value.damageDescription.trim() : null,
-      photoPath: value.photoPath,
+      photoPath: storedPhotoPath,
       syncStatus: 'pendiente',
       verificationPending: true,
+      verificationStatus: 'pendiente',
       createdAt: now,
       updatedAt: now,
     };
+
     const parsedReading = readingSchema.safeParse(reading);
     if (!parsedReading.success) {
       Alert.alert('Lectura inválida', 'Verifica que la lectura actual no sea menor que la anterior.');
       return;
     }
 
-    await saveReading(parsedReading.data);
+    try {
+      if (editingReading) {
+        const currentReading = await findReadingById(editingReading.id);
+        if (!currentReading || currentReading.syncStatus === 'enviada') {
+          Alert.alert('Lectura no editable', 'Esta lectura ya fue enviada y no puede modificarse.');
+          return;
+        }
+        const updated = await updateReading({ ...parsedReading.data, id: editingReading.id });
+        if (!updated) {
+          Alert.alert('Lectura no editable', 'La lectura ya fue enviada y no puede modificarse.');
+          return;
+        }
+      } else {
+        await saveReadingAndDeleteDraft(parsedReading.data, session.employeeCode);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message.toLowerCase() : '';
+      if (message.includes('unique') || message.includes('constraint')) {
+        Alert.alert(
+          'Lectura duplicada',
+          'Ya existe una lectura registrada para este medidor durante el período actual.',
+        );
+        return;
+      }
+      Alert.alert('No se pudo guardar', 'La lectura no pudo guardarse. Intenta nuevamente.');
+      return;
+    }
 
-    await deleteDraft(session.employeeCode);
+    if (editingReading) {
+      await deleteDraft(session.employeeCode);
+    }
+    if (!photoRequired && value.photoPath) {
+      await deleteStoredPhoto(value.photoPath);
+    }
+    await refreshPendingCount();
+    if (isConnected) {
+      void synchronize();
+    }
     clearReading();
-    Alert.alert('Lectura guardada', 'La lectura quedó pendiente de verificación y envío.', [
+    Alert.alert(
+      editingReading ? 'Lectura corregida' : 'Lectura guardada',
+      editingReading
+        ? 'La lectura pendiente fue actualizada.'
+        : 'La lectura quedó pendiente de verificación y envío.',
+      [
       { text: 'Aceptar', onPress: () => router.replace('/home') },
-    ]);
+      ],
+    );
   };
 
   return (
@@ -223,41 +358,81 @@ export default function RegisterScreen(): React.JSX.Element {
         </>
       ) : null}
 
-      <Controller
-        control={control}
-        name="photoPath"
-        render={({ field: { onChange, value } }) => (
-          <View style={styles.photoSection}>
-            <Text style={styles.label}>Fotografía del medidor</Text>
-            <Pressable
-              onPress={async () => {
-                const result = await captureMeterPhoto();
-                if (result.denied) {
-                  Alert.alert(
-                    'Permiso de cámara',
-                    'La cámara es necesaria para respaldar ciertos registros. Puedes continuar sin foto cuando no sea obligatoria.',
-                  );
-                  return;
-                }
-                if (result.path) {
-                  onChange(result.path);
-                }
-              }}
-              style={styles.secondaryButton}
-            >
-              <Text style={styles.secondaryText}>
-                {value ? 'Volver a tomar fotografía' : 'Tomar fotografía'}
+      {isPhotoRequired(
+        meterStatus,
+        meterStatus === 'inaccesible' ? null : currentReading,
+        meter.previousReading,
+        meter.monthlyAverage,
+      ) ? (
+        <Controller
+          control={control}
+          name="photoPath"
+          render={({ field: { onChange, value } }) => (
+            <View style={styles.photoSection}>
+              <Text style={styles.label}>Fotografía obligatoria del medidor</Text>
+              <Text style={styles.info}>
+                Se requiere porque el medidor está dañado o el consumo es anómalo.
               </Text>
-            </Pressable>
-            {photoPath ? <Text style={styles.info}>Foto guardada en el teléfono.</Text> : null}
-          </View>
-        )}
-      />
+              <Pressable
+                onPress={async () => {
+                  try {
+                    const result = await captureMeterPhoto();
+                    if (result.denied) {
+                      Alert.alert(
+                        'Permiso de cámara necesario',
+                        'Se necesita la cámara para respaldar este registro de medidor dañado o consumo anómalo. Habilita el permiso de cámara en Ajustes para tomar la foto y continuar.',
+                      );
+                      return;
+                    }
+                    if (result.path) {
+                      try {
+                        await saveDraft({
+                          employeeCode: session.employeeCode,
+                          meterCode: meter.code,
+                          currentStep: 'register',
+                          payloadJson: JSON.stringify({
+                            meter,
+                            form: { ...formValues, photoPath: result.path },
+                          }),
+                          photoPath: result.path,
+                          updatedAt: new Date().toISOString(),
+                        });
+                      } catch {
+                        await deleteStoredPhoto(result.path);
+                        Alert.alert(
+                          'No se pudo guardar el borrador',
+                          'La fotografía no quedó asociada al registro. Intenta tomarla nuevamente.',
+                        );
+                        return;
+                      }
+                      if (photoPath && photoPath !== result.path) {
+                        await deleteStoredPhoto(photoPath);
+                      }
+                      onChange(result.path);
+                    }
+                  } catch {
+                    Alert.alert(
+                      'No se pudo guardar la foto',
+                      'No se pudo conservar la fotografía en el almacenamiento de la aplicación. Intenta nuevamente.',
+                    );
+                  }
+                }}
+                style={styles.secondaryButton}
+              >
+                <Text style={styles.secondaryText}>
+                  {value ? 'Volver a tomar fotografía' : 'Tomar fotografía requerida'}
+                </Text>
+              </Pressable>
+              {photoPath ? <Text style={styles.info}>Foto guardada en el teléfono.</Text> : null}
+            </View>
+          )}
+        />
+      ) : null}
 
       <Pressable disabled={isSubmitting} onPress={handleSubmit(submit)} style={styles.button}>
         <Text style={styles.buttonText}>{isSubmitting ? 'Guardando...' : 'Guardar lectura'}</Text>
       </Pressable>
-      <Pressable onPress={() => router.back()} style={styles.cancelButton}>
+      <Pressable onPress={() => void cancelRegistration()} style={styles.cancelButton}>
         <Text style={styles.cancelText}>Cancelar</Text>
       </Pressable>
     </ScrollView>

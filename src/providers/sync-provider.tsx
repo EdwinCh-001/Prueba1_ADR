@@ -3,12 +3,23 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import { findRemoteReadingByClientId, sendReading } from '../api/reading-api';
-import { findPendingReadings, markReadingAsSent } from '../repositories/reading-repository';
+import { fetchMeter } from '../api/meter-api';
+import {
+  findPendingReadings,
+  findPendingVerificationReadings,
+  markReadingAsSent,
+  markReadingVerification,
+} from '../repositories/reading-repository';
 
 interface SyncState {
   isConnected: boolean;
   pendingCount: number;
   syncError: string | null;
+}
+
+interface SyncContextValue extends SyncState {
+  refreshPendingCount: () => Promise<void>;
+  synchronize: () => Promise<void>;
 }
 
 export function SyncProvider({ children }: React.PropsWithChildren): React.JSX.Element {
@@ -33,8 +44,24 @@ export function SyncProvider({ children }: React.PropsWithChildren): React.JSX.E
     isSynchronizing.current = true;
     setState((current) => ({ ...current, syncError: null }));
     try {
+      const verificationPending = await findPendingVerificationReadings();
+      for (const reading of verificationPending) {
+        if (reading.currentReading === null) {
+          await markReadingVerification(reading.id, 'verificada', new Date().toISOString());
+          continue;
+        }
+        const remoteMeter = await fetchMeter(reading.meterCode);
+        const status = reading.currentReading < remoteMeter.previousReading
+          ? 'inconsistente'
+          : 'verificada';
+        await markReadingVerification(reading.id, status, new Date().toISOString());
+      }
+
       const pending = await findPendingReadings();
       for (const reading of pending) {
+        if (reading.verificationStatus === 'inconsistente') {
+          continue;
+        }
         const alreadyExists = await findRemoteReadingByClientId(reading.id);
         if (!alreadyExists) {
           await sendReading(reading);
@@ -78,12 +105,18 @@ export function SyncProvider({ children }: React.PropsWithChildren): React.JSX.E
     return unsubscribe;
   }, [refreshPendingCount, synchronize]);
 
-  return <SyncContext.Provider value={state}>{children}</SyncContext.Provider>;
+  return (
+    <SyncContext.Provider
+      value={{ ...state, refreshPendingCount, synchronize }}
+    >
+      {children}
+    </SyncContext.Provider>
+  );
 }
 
-const SyncContext = createContext<SyncState | null>(null);
+const SyncContext = createContext<SyncContextValue | null>(null);
 
-export const useSyncState = (): SyncState => {
+export const useSyncState = (): SyncContextValue => {
   const context = useContext(SyncContext);
   if (!context) {
     throw new Error('useSyncState debe utilizarse dentro de SyncProvider');

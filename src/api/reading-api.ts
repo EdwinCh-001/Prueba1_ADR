@@ -39,6 +39,10 @@ export const findRemoteReadingByClientId = async (clientId: string): Promise<boo
   const response = await fetch(
     `${ensureApiUrl()}/lecturas?clienteId=${encodeURIComponent(clientId)}`,
   );
+  // MockAPI responds with 404 when a filtered collection has no matches.
+  if (response.status === 404) {
+    return false;
+  }
   if (!response.ok) {
     throw new Error(`No se pudo verificar la lectura (${response.status}).`);
   }

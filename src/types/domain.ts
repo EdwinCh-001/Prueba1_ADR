@@ -8,4 +8,5 @@ export type {
   ReadingForm,
   Session,
   SyncStatus,
+  VerificationStatus,
 } from './schemas';

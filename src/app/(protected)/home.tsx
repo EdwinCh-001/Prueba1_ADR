@@ -8,9 +8,12 @@ import { useReading } from '../../context/reading-context';
 import { deleteDraft, findDraftByEmployee } from '../../repositories/draft-repository';
 import { deleteStoredPhoto } from '../../services/photo-storage';
 import { findCachedMeter } from '../../repositories/meter-cache-repository';
-import type { ReadingForm, Meter } from '../../types/domain';
 import { useMeterQuery } from '../../hooks/use-meter-query';
-import { meterCodeSchema } from '../../types/schemas';
+import {
+  hasMeaningfulDraftData,
+  meterCodeSchema,
+  registrationDraftPayloadSchema,
+} from '../../types/schemas';
 
 export default function HomeScreen(): React.JSX.Element {
   const { session, signOut } = useSession();
@@ -26,39 +29,98 @@ export default function HomeScreen(): React.JSX.Element {
       return;
     }
 
-    void findDraftByEmployee(session.employeeCode).then((draft) => {
-      if (!draft) {
-        return;
+    let isActive = true;
+    const discardDraft = async (photoPath: string | null, message?: string): Promise<void> => {
+      try {
+        await deleteDraft(session.employeeCode);
+        await deleteStoredPhoto(photoPath);
+        if (message && isActive) {
+          Alert.alert('Borrador descartado', message);
+        }
+      } catch {
+        if (isActive) {
+          Alert.alert('Error', 'No se pudo eliminar el borrador guardado.');
+        }
       }
+    };
 
-      Alert.alert('Registro pendiente', '¿Deseas continuar el registro guardado?', [
-        {
-          text: 'Descartar',
-          style: 'destructive',
-          onPress: () => {
-            void deleteDraft(session.employeeCode);
-            void deleteStoredPhoto(draft.photoPath);
+    const restoreDraft = async (payloadJson: string, photoPath: string | null): Promise<void> => {
+      try {
+        const parsedPayload = registrationDraftPayloadSchema.safeParse(
+          JSON.parse(payloadJson) as unknown,
+        );
+        if (!parsedPayload.success || !hasMeaningfulDraftData(parsedPayload.data.form)) {
+          await discardDraft(
+            photoPath,
+            'El registro guardado estaba incompleto y se eliminó.',
+          );
+          return;
+        }
+
+        const { meter, form } = parsedPayload.data;
+        const cachedMeter = await findCachedMeter(meter.code);
+        if (!isActive) {
+          return;
+        }
+        setMeter(cachedMeter ?? meter);
+        setForm(form);
+        router.push('/register');
+      } catch {
+        await discardDraft(
+          photoPath,
+          'El registro guardado no pudo recuperarse y se eliminó.',
+        );
+      }
+    };
+
+    const checkDraft = async (): Promise<void> => {
+      try {
+        const draft = await findDraftByEmployee(session.employeeCode);
+        if (!isActive || !draft) {
+          return;
+        }
+
+        let payloadJson: unknown;
+        try {
+          payloadJson = JSON.parse(draft.payloadJson) as unknown;
+        } catch {
+          await discardDraft(
+            draft.photoPath,
+            'El registro guardado no tenía un formato válido y se eliminó.',
+          );
+          return;
+        }
+        const parsedPayload = registrationDraftPayloadSchema.safeParse(payloadJson);
+        if (!parsedPayload.success || !hasMeaningfulDraftData(parsedPayload.data.form)) {
+          await discardDraft(
+            draft.photoPath,
+            'El registro guardado estaba incompleto y se eliminó.',
+          );
+          return;
+        }
+
+        Alert.alert('Registro pendiente', '¿Deseas continuar el registro guardado?', [
+          {
+            text: 'Descartar',
+            style: 'destructive',
+            onPress: () => void discardDraft(draft.photoPath),
           },
-        },
-        {
-          text: 'Continuar',
-          onPress: () => {
-            try {
-              const payload = JSON.parse(draft.payloadJson) as { meter: Meter; form: ReadingForm };
-              void findCachedMeter(payload.meter.code).then((cachedMeter) => {
-                if (cachedMeter) {
-                  setMeter(cachedMeter);
-                  setForm(payload.form);
-                  router.push('/register');
-                }
-              });
-            } catch {
-              void deleteDraft(session.employeeCode);
-            }
+          {
+            text: 'Continuar',
+            onPress: () => void restoreDraft(draft.payloadJson, draft.photoPath),
           },
-        },
-      ]);
-    });
+        ]);
+      } catch {
+        if (isActive) {
+          Alert.alert('Error', 'No se pudo revisar el registro guardado.');
+        }
+      }
+    };
+
+    void checkDraft();
+    return () => {
+      isActive = false;
+    };
   }, [session, setForm, setMeter]);
 
   const handleSignOut = async (): Promise<void> => {
@@ -127,6 +189,9 @@ export default function HomeScreen(): React.JSX.Element {
         </View>
       ) : null}
 
+      <Pressable onPress={() => router.push('/pending')} style={styles.secondaryButton}>
+        <Text style={styles.secondaryButtonText}>Ver lecturas registradas</Text>
+      </Pressable>
       <Pressable onPress={handleSignOut} style={styles.button}>
         <Text style={styles.buttonText}>Cerrar sesión</Text>
       </Pressable>
@@ -154,5 +219,7 @@ const styles = StyleSheet.create({
   status: { color: '#667085', marginTop: 12 },
   startButton: { backgroundColor: '#0B6E69', borderRadius: 10, marginTop: 12, padding: 14 },
   startButtonText: { color: '#FFFFFF', fontWeight: '700', textAlign: 'center' },
+  secondaryButton: { borderColor: '#0B6E69', borderRadius: 10, borderWidth: 1, marginTop: 16, padding: 14 },
+  secondaryButtonText: { color: '#0B6E69', fontWeight: '700', textAlign: 'center' },
   title: { color: '#101828', fontSize: 30, fontWeight: '800', marginTop: 8 },
 });

@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SessionProvider } from '../context/session-context';
 import { ReadingProvider } from '../context/reading-context';
@@ -15,10 +15,10 @@ export default function RootLayout(): React.JSX.Element {
         <SyncProvider>
           <SessionProvider>
             <ReadingProvider>
-              <View style={{ flex: 1 }}>
+              <SafeAreaView edges={['top']} style={{ backgroundColor: '#FFFFFF', flex: 1 }}>
                 <ConnectivityBanner />
                 <Stack screenOptions={{ headerShown: false }} />
-              </View>
+              </SafeAreaView>
             </ReadingProvider>
           </SessionProvider>
         </SyncProvider>

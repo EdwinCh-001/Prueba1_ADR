@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 const DATABASE_NAME = 'epmaps.db';
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -34,6 +34,8 @@ const createSchema = async (database: SQLite.SQLiteDatabase): Promise<void> => {
       ruta_foto TEXT,
       estado_envio TEXT NOT NULL CHECK (estado_envio IN ('pendiente', 'enviada')),
       pendiente_verificar INTEGER NOT NULL DEFAULT 0,
+      estado_verificacion TEXT NOT NULL DEFAULT 'pendiente'
+        CHECK (estado_verificacion IN ('pendiente', 'verificada', 'inconsistente')),
       creado_en TEXT NOT NULL,
       actualizado_en TEXT NOT NULL,
       UNIQUE (medidor_codigo, periodo)
@@ -55,6 +57,15 @@ const createSchema = async (database: SQLite.SQLiteDatabase): Promise<void> => {
   const versionRow = await database.getFirstAsync<{ user_version: number }>(
     'PRAGMA user_version',
   );
+  const verificationColumn = await database.getFirstAsync<{ name: string }>(
+    `SELECT name FROM pragma_table_info('lecturas') WHERE name = 'estado_verificacion'`,
+  );
+  if ((versionRow?.user_version ?? 0) < 2 && !verificationColumn) {
+    await database.execAsync(`
+      ALTER TABLE lecturas ADD COLUMN estado_verificacion TEXT NOT NULL DEFAULT 'pendiente'
+        CHECK (estado_verificacion IN ('pendiente', 'verificada', 'inconsistente'));
+    `);
+  }
   if ((versionRow?.user_version ?? 0) < SCHEMA_VERSION) {
     await database.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   }

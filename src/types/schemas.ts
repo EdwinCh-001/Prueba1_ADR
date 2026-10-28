@@ -6,6 +6,7 @@ export const meterCodeSchema = z
 
 export const meterStatusSchema = z.enum(['normal', 'inaccesible', 'danado']);
 export const syncStatusSchema = z.enum(['pendiente', 'enviada']);
+export const verificationStatusSchema = z.enum(['pendiente', 'verificada', 'inconsistente']);
 
 export const meterSchema = z.object({
   code: meterCodeSchema,
@@ -31,6 +32,7 @@ export const readingSchema = z.object({
   photoPath: z.string().min(1).nullable(),
   syncStatus: syncStatusSchema,
   verificationPending: z.boolean(),
+  verificationStatus: verificationStatusSchema,
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 });
@@ -54,16 +56,53 @@ export const loginFormSchema = z.object({
   password: z.string().min(1, 'Ingresa tu clave'),
 });
 
-export const readingFormSchema = z
-  .object({
-    meterStatus: meterStatusSchema,
+export const draftFormSchema = z.object({
+  meterStatus: meterStatusSchema,
+  currentReading: z.string(),
+  reason: z.string(),
+  damageDescription: z.string(),
+  photoPath: z.string().min(1).nullable(),
+  anomalyConfirmed: z.boolean(),
+});
+
+export const registrationDraftPayloadSchema = z.object({
+  meter: meterSchema,
+  form: draftFormSchema,
+});
+
+export const hasMeaningfulDraftData = (
+  form: Partial<Pick<
+    z.infer<typeof draftFormSchema>,
+    'currentReading' | 'reason' | 'damageDescription' | 'photoPath'
+  >>,
+): boolean =>
+  (form.currentReading?.trim().length ?? 0) > 0
+  || (form.reason?.trim().length ?? 0) > 0
+  || (form.damageDescription?.trim().length ?? 0) > 0
+  || (typeof form.photoPath === 'string' && form.photoPath.length > 0);
+
+export const isAnomalousConsumption = (
+  currentReading: number | null,
+  previousReading: number,
+  monthlyAverage: number,
+): boolean =>
+  currentReading !== null
+  && currentReading - previousReading > monthlyAverage * 3;
+
+export const isPhotoRequired = (
+  meterStatus: z.infer<typeof meterStatusSchema>,
+  currentReading: number | null,
+  previousReading: number,
+  monthlyAverage: number,
+): boolean =>
+  meterStatus === 'danado'
+  || isAnomalousConsumption(currentReading, previousReading, monthlyAverage);
+
+export const readingFormSchema = draftFormSchema
+  .extend({
     currentReading: z
       .string()
       .refine((value) => value.trim() === '' || /^\d+(\.\d+)?$/.test(value), 'Ingresa una lectura válida'),
-    reason: z.string(),
-    damageDescription: z.string(),
-    photoPath: z.string().min(1).nullable(),
-    anomalyConfirmed: z.boolean(),
   })
   .superRefine((value, context) => {
     if (value.meterStatus === 'normal' && value.currentReading.trim() === '') {
@@ -94,6 +133,7 @@ export const readingFormSchema = z
 export type MeterCode = z.infer<typeof meterCodeSchema>;
 export type MeterStatus = z.infer<typeof meterStatusSchema>;
 export type SyncStatus = z.infer<typeof syncStatusSchema>;
+export type VerificationStatus = z.infer<typeof verificationStatusSchema>;
 export type Meter = z.infer<typeof meterSchema>;
 export type Reading = z.infer<typeof readingSchema>;
 export type Draft = z.infer<typeof draftSchema>;

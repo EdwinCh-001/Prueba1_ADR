@@ -41,6 +41,8 @@ Se utilizará **@react-native-community/netinfo** para detectar cambios en la co
 
 Cuando NetInfo informe que existe conexión disponible, la aplicación iniciará automáticamente el proceso de sincronización de las lecturas pendientes almacenadas en SQLite.
 
+Antes del envío, las lecturas marcadas como pendientes de verificación se comparan con la última lectura del medidor recuperada desde la API. Si la lectura local es menor, se marcan como `inconsistente` y permanecen almacenadas para revisión; de lo contrario, se marcan como `verificada` y continúan hacia el envío.
+
 La sincronización consultará todas las lecturas cuyo estado sea `pendiente` y las enviará en orden de antigüedad.
 
 Cada lectura utiliza un identificador único generado en el cliente, que se guarda también como campo de la lectura en MockAPI. Antes de enviar una lectura, se consulta a MockAPI si ya existe una con ese identificador. Si existe, la lectura se marca como enviada sin reenviarla; si no existe, se envía y, tras una respuesta exitosa, se marca como enviada en SQLite. Así, si la señal se corta a mitad de un envío y la lectura llegó al servidor, el siguiente intento no la duplica.

@@ -23,7 +23,14 @@
       "expo-status-bar",
       "expo-router",
       "expo-sqlite",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Se necesita la cámara para fotografiar un medidor dañado o documentar un consumo anómalo.",
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }
