@@ -5,13 +5,22 @@ interface ListRowProps {
   title: string;
   subtitle: string;
   onPress: () => void;
+  elevated?: boolean;
 }
 
-export function ListRow({ glyph, title, subtitle, onPress }: ListRowProps): React.JSX.Element {
+export function ListRow({
+  glyph,
+  title,
+  subtitle,
+  onPress,
+  elevated = false,
+}: ListRowProps): React.JSX.Element {
   return (
     <Pressable
       accessibilityRole="button"
-      className="flex-row items-center gap-4 rounded-3xl border border-line/90 bg-surface/85 p-4 shadow-sm active:bg-surface-raised"
+      className={`flex-row items-center gap-4 rounded-3xl border border-line/90 bg-surface/85 p-4 ${
+        elevated ? 'shadow-sm' : ''
+      } active:bg-surface-raised`}
       onPress={onPress}
     >
       <View className="h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft">

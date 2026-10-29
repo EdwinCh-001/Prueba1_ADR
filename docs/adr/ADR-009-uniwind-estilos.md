@@ -10,7 +10,7 @@ Aceptado.
 
 ## Requisitos relacionados
 
-El rediseño visual responde a la sanción de la prueba por una interfaz genérica, no a un requisito funcional R1–R10. Sin embargo, varios elementos de pantalla sostienen requisitos y el rediseño debe volverlos más legibles en campo:
+El rediseño visual responde por una interfaz genérica. Sin embargo, varios elementos de pantalla sostienen requisitos y el rediseño debe volverlos más legibles en campo:
 
 - R2: el mensaje de error de formato del código de medidor debe seguir visible bajo el campo.
 - R3: los siete datos del medidor deben seguir visibles y jerarquizados.
@@ -79,7 +79,7 @@ El 29 de octubre de 2026 se reemplazó el tema oscuro por un tema claro a pedido
 - Revisar `package.json` y confirmar que las únicas dependencias nuevas son `uniwind` y `tailwindcss`.
 - Confirmar que existe `src/global.css` con las importaciones de Tailwind y Uniwind y el bloque `@theme` con los tokens del tema vigente.
 - Ejecutar `grep -rn "StyleSheet" src/` y confirmar que no queda ningún resultado.
-- Confirmar que no hay valores hexadecimales fuera de `src/global.css`, salvo el `contentStyle` de los `Stack` que replica el color de fondo.
+- Confirmar que no hay valores hexadecimales de interfaz fuera de `src/global.css` y de la configuración nativa de `app.json`.
 - Recorrer Login, Home, Registro de lectura y Lecturas registradas en un dispositivo o emulador y verificar que el banner de conexión y pendientes se ve en todas.
 - Verificar que los siete datos del medidor, el error de formato, la advertencia de consumo anómalo, la etiqueta de foto y el botón "Corregir lectura" siguen visibles y funcionales.
 - Ejecutar `npx tsc --noEmit`, `npx expo lint` y `npx expo-doctor`.

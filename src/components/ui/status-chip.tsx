@@ -6,8 +6,8 @@ export type StatusTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 const containerTones: Record<StatusTone, string> = {
   success: 'border-success bg-success-soft',
-  warning: 'border-success/60 bg-warning-soft',
-  danger: 'border-success/60 bg-danger-soft',
+  warning: 'border-warning bg-warning-soft',
+  danger: 'border-danger bg-danger-soft',
   info: 'border-brand-light bg-brand-soft',
   neutral: 'border-line bg-surface-raised',
 };

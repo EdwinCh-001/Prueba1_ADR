@@ -21,7 +21,8 @@ export const captureMeterPhoto = async (): Promise<
     allowsEditing: true,
     aspect: [4, 3],
     mediaTypes: ['images'],
-    quality: 0.8,
+    quality: 0.6,
+    exif: false,
   });
 
   if (result.canceled || !result.assets[0]) {

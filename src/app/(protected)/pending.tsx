@@ -8,7 +8,7 @@ import { findCachedMeter } from '../../repositories/meter-cache-repository';
 import { findAllReadings } from '../../repositories/reading-repository';
 import { isStoredPhotoAvailable } from '../../services/photo-storage';
 import type { Reading } from '../../types/domain';
-import { useSyncState } from '../../providers/sync-provider';
+import { usePendingCount } from '../../providers/sync-provider';
 import {
   Card,
   GhostButton,
@@ -56,6 +56,10 @@ function StoredPhotoPreview({ path }: { path: string }): React.JSX.Element {
     <Image
       accessibilityLabel="Fotografía guardada del medidor"
       className="h-48 w-full rounded-2xl"
+      resizeMode="cover"
+      resizeMethod="resize"
+      width={320}
+      height={192}
       onError={() => setIsAvailable(false)}
       source={{ uri: path }}
     />
@@ -77,7 +81,7 @@ const verificationTones: Record<Reading['verificationStatus'], StatusTone> = {
 export default function PendingScreen(): React.JSX.Element {
   const { setMeter, setEditingReading } = useReading();
   const { showNotice } = useNotice();
-  const { pendingCount } = useSyncState();
+  const { pendingCount } = usePendingCount();
   const [readings, setReadings] = useState<Reading[]>([]);
 
   useEffect(() => {
@@ -115,14 +119,18 @@ export default function PendingScreen(): React.JSX.Element {
       </View>
 
       {readings.length === 0 ? (
-        <Card className="items-center gap-3 py-8">
+        <Card className="items-center gap-3 py-8" variant="highlight">
           <Text className="text-3xl text-content-muted">≡</Text>
           <Text className="text-base text-content-muted">No hay lecturas registradas.</Text>
         </Card>
       ) : null}
 
       {readings.map((reading) => (
-        <Card className="gap-3" key={reading.id}>
+        <Card
+          className="gap-3"
+          key={reading.id}
+          variant={reading.syncStatus === 'pendiente' ? 'highlight' : 'success'}
+        >
           <View className="flex-row items-center justify-between gap-3">
             <Text className="flex-1 text-lg font-bold text-content">{reading.meterCode}</Text>
             <StatusChip

@@ -1,8 +1,10 @@
-export { GhostButton, PrimaryButton, SecondaryButton } from './button';
+export { Button, GhostButton, PrimaryButton, SecondaryButton } from './button';
+export type { ButtonProps, ButtonVariant } from './button';
 export { Icon } from './icon';
 export type { IconName } from './icon';
 export { Badge } from './badge';
 export { Card } from './card';
+export type { CardVariant } from './card';
 export { Field } from './field';
 export { KeyValueRow } from './key-value-row';
 export { ListRow } from './list-row';

@@ -29,7 +29,7 @@ export function LogoPlate({
       className={`${alignClasses[align]} ${imageSizes[size]} ${className}`}
       resizeMode="contain"
       source={require('../../../assets/Logo.png')}
-      tintColor={tone === 'white' ? '#FFFFFF' : undefined}
+        tintColorClassName={tone === 'white' ? 'accent-white' : undefined}
     />
   );
 }

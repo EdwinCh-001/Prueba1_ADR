@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { ActivityIndicator, Text, TextInput, View } from 'react-native';
 
@@ -10,7 +10,7 @@ import { deleteDraft, findDraftByEmployee } from '../../repositories/draft-repos
 import { deleteStoredPhoto } from '../../services/photo-storage';
 import { findCachedMeter } from '../../repositories/meter-cache-repository';
 import { useMeterQuery } from '../../hooks/use-meter-query';
-import { useSyncState } from '../../providers/sync-provider';
+import { useConnectivity, usePendingCount } from '../../providers/sync-provider';
 import {
   hasMeaningfulDraftData,
   meterCodeSchema,
@@ -31,19 +31,50 @@ import {
   inputClassName,
 } from '../../components/ui';
 
+const HomeHeader = memo(function HomeHeader({
+  employeeCode,
+  initials,
+}: {
+  employeeCode: string;
+  initials: string;
+}): React.JSX.Element {
+  return (
+    <View className="relative overflow-hidden rounded-[32px] bg-brand-dark p-5">
+      <View className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand" />
+      <View className="absolute -bottom-12 right-10 h-20 w-20 rounded-full bg-brand-light/50" />
+      <LogoPlate size="sm" tone="white" />
+      <View className="flex-row items-center justify-between gap-4">
+        <Text className="flex-1 text-3xl font-extrabold uppercase tracking-wide text-white">
+          Hola, {employeeCode}
+        </Text>
+        <View className="-mt-3 h-14 w-14 items-center justify-center rounded-full border-2 border-white/60 bg-white/10">
+          <Text className="text-lg font-extrabold text-white">{initials}</Text>
+        </View>
+      </View>
+      <Text className="mt-2 text-sm font-semibold uppercase tracking-widest text-on-brand">
+        Control de lecturas en campo
+      </Text>
+    </View>
+  );
+});
+
 export default function HomeScreen(): React.JSX.Element {
   const { session, signOut } = useSession();
   const { showNotice } = useNotice();
   const { setForm, setMeter } = useReading();
-  const { isConnected, pendingCount } = useSyncState();
+  const { isConnected } = useConnectivity();
+  const { pendingCount } = usePendingCount();
   const [meterCode, setMeterCode] = useState('');
   const { control, handleSubmit, formState: { errors } } = useForm<{ code: string }>({
     defaultValues: { code: '' },
   });
   const meterQuery = useMeterQuery(meterCode);
   const visibleMeter = meterQuery.data?.code === meterCode ? meterQuery.data : null;
-  const initials = session?.employeeCode.slice(0, 2).toUpperCase() ?? '';
-  const today = new Date().toLocaleDateString('es-EC', { day: 'numeric', month: 'short' });
+  const initials = useMemo(() => session?.employeeCode.slice(0, 2).toUpperCase() ?? '', [session?.employeeCode]);
+  const today = useMemo(
+    () => new Date().toLocaleDateString('es-EC', { day: 'numeric', month: 'short' }),
+    [],
+  );
 
   useEffect(() => {
     if (!session) {
@@ -147,7 +178,7 @@ export default function HomeScreen(): React.JSX.Element {
     router.replace('/login');
   };
 
-  const submitMeterCode = ({ code }: { code: string }): void => {
+  const submitMeterCode = useCallback(({ code }: { code: string }): void => {
     const parsedCode = meterCodeSchema.safeParse(code.trim());
     if (parsedCode.success) {
       setMeterCode(parsedCode.data);
@@ -155,28 +186,13 @@ export default function HomeScreen(): React.JSX.Element {
     }
 
     setMeterCode('');
-  };
+  }, []);
 
   return (
     <Screen>
-      <View className="relative overflow-hidden rounded-[32px] bg-brand-dark p-5">
-        <View className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand" />
-        <View className="absolute -bottom-12 right-10 h-20 w-20 rounded-full bg-brand-light/50" />
-        <LogoPlate size="sm" tone="white" />
-        <View className="flex-row items-center justify-between gap-4">
-          <Text className="flex-1 text-3xl font-extrabold uppercase tracking-wide text-white">
-            Hola, {session?.employeeCode}
-          </Text>
-          <View className="-mt-3 h-14 w-14 items-center justify-center rounded-full border-2 border-white/60 bg-white/10">
-            <Text className="text-lg font-extrabold text-white">{initials}</Text>
-          </View>
-        </View>
-        <Text className="mt-2 text-sm font-semibold uppercase tracking-widest text-on-brand">
-          Control de lecturas en campo
-        </Text>
-      </View>
+      <HomeHeader employeeCode={session?.employeeCode ?? ''} initials={initials} />
 
-      <Card className="gap-5">
+      <Card className="gap-5" variant="success">
         <Badge label="Jornada activa" />
         <StatsRow
           items={[
@@ -193,7 +209,7 @@ export default function HomeScreen(): React.JSX.Element {
 
       <View className="gap-3">
         <SectionTitle>Busca un medidor</SectionTitle>
-        <Card className="gap-4">
+        <Card className="gap-4" variant="highlight">
           <Controller
             control={control}
             name="code"
@@ -226,13 +242,13 @@ export default function HomeScreen(): React.JSX.Element {
         </View>
       ) : null}
       {meterQuery.isError ? (
-        <View className="rounded-2xl bg-danger-soft p-3">
+        <View className="rounded-2xl border border-danger bg-danger-soft p-3">
           <Text className="text-sm text-danger">{meterQuery.error.message}</Text>
         </View>
       ) : null}
 
       {visibleMeter ? (
-        <View className="overflow-hidden rounded-3xl border border-line/90 bg-surface/85 shadow-sm">
+        <View className="overflow-hidden rounded-3xl border border-line/90 bg-surface/85">
           <View className="relative gap-2 overflow-hidden bg-brand p-5">
             <View className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-brand-dark" />
             <View className="absolute -right-2 top-16 h-14 w-14 rounded-full bg-brand-dark" />

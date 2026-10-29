@@ -1,9 +1,11 @@
 import { Text, View } from 'react-native';
 
-import { useSyncState } from '../providers/sync-provider';
+import { useConnectivity, usePendingCount, useSyncError } from '../providers/sync-provider';
 
 export function ConnectivityBanner(): React.JSX.Element {
-  const { isConnected, pendingCount, syncError } = useSyncState();
+  const { isConnected } = useConnectivity();
+  const { pendingCount } = usePendingCount();
+  const { syncError } = useSyncError();
   return (
     <View className="bg-brand-dark">
       <View className="flex-row items-center justify-between border-b border-white/20 px-5 py-3.5">

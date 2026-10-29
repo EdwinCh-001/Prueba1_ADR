@@ -1,6 +1,6 @@
 import NetInfo from '@react-native-community/netinfo';
 import { useQueryClient } from '@tanstack/react-query';
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { findRemoteReadingByClientId, sendReading } from '../api/reading-api';
 import { fetchMeter } from '../api/meter-api';
@@ -22,6 +22,10 @@ interface SyncContextValue extends SyncState {
   refreshPendingCount: () => Promise<void>;
   synchronize: () => Promise<void>;
 }
+const ConnectivityContext = createContext<boolean | null>(null);
+const PendingCountContext = createContext<number | null>(null);
+const SyncErrorContext = createContext<string | null | undefined>(undefined);
+const SyncActionsContext = createContext<Pick<SyncContextValue, 'refreshPendingCount' | 'synchronize'> | null>(null);
 
 export function SyncProvider({ children }: React.PropsWithChildren): React.JSX.Element {
   const queryClient = useQueryClient();
@@ -113,21 +117,60 @@ export function SyncProvider({ children }: React.PropsWithChildren): React.JSX.E
     return unsubscribe;
   }, [refreshPendingCount, synchronize]);
 
-  return (
-    <SyncContext.Provider
-      value={{ ...state, refreshPendingCount, synchronize }}
-    >
-      {children}
-    </SyncContext.Provider>
-  );
-}
+  const actionsValue = useMemo(() => ({ refreshPendingCount, synchronize }), [refreshPendingCount, synchronize]);
 
-const SyncContext = createContext<SyncContextValue | null>(null);
+  return (
+    <ConnectivityContext.Provider value={state.isConnected}>
+      <PendingCountContext.Provider value={state.pendingCount}>
+        <SyncErrorContext.Provider value={state.syncError}>
+          <SyncActionsContext.Provider value={actionsValue}>
+            {children}
+          </SyncActionsContext.Provider>
+        </SyncErrorContext.Provider>
+      </PendingCountContext.Provider>
+    </ConnectivityContext.Provider>
+  );
+};
 
 export const useSyncState = (): SyncContextValue => {
-  const context = useContext(SyncContext);
-  if (!context) {
+  const isConnected = useContext(ConnectivityContext);
+  const pendingCount = useContext(PendingCountContext);
+  const syncError = useContext(SyncErrorContext);
+  const actions = useContext(SyncActionsContext);
+  if (isConnected === null || pendingCount === null || syncError === undefined || !actions) {
     throw new Error('useSyncState debe utilizarse dentro de SyncProvider');
   }
-  return context;
+  return { isConnected, pendingCount, syncError, ...actions };
+};
+
+export const useConnectivity = (): Pick<SyncState, 'isConnected'> => {
+  const isConnected = useContext(ConnectivityContext);
+  if (isConnected === null) {
+    throw new Error('useConnectivity debe utilizarse dentro de SyncProvider');
+  }
+  return { isConnected };
+};
+
+export const usePendingCount = (): Pick<SyncState, 'pendingCount'> => {
+  const pendingCount = useContext(PendingCountContext);
+  if (pendingCount === null) {
+    throw new Error('usePendingCount debe utilizarse dentro de SyncProvider');
+  }
+  return { pendingCount };
+};
+
+export const useSyncError = (): Pick<SyncState, 'syncError'> => {
+  const syncError = useContext(SyncErrorContext);
+  if (syncError === undefined) {
+    throw new Error('useSyncError debe utilizarse dentro de SyncProvider');
+  }
+  return { syncError };
+};
+
+export const useSyncActions = (): Pick<SyncContextValue, 'refreshPendingCount' | 'synchronize'> => {
+  const actions = useContext(SyncActionsContext);
+  if (!actions) {
+    throw new Error('useSyncActions debe utilizarse dentro de SyncProvider');
+  }
+  return actions;
 };

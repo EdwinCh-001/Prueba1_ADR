@@ -36,8 +36,9 @@ export const useMeterQuery = (code: string) => {
     queryKey: ['meter', validCode || null],
     queryFn: ({ signal }) => getMeter(validCode, signal),
     enabled: parsedCode.success,
-    networkMode: 'always',
-    retry: 1,
+    networkMode: 'online',
+    retry: (failureCount, error) =>
+      failureCount < 1 && !(error instanceof Error && error.name === 'AbortError'),
     staleTime: CACHE_MAX_AGE_MS,
     gcTime: 24 * 60 * 60 * 1000,
   });

@@ -325,7 +325,7 @@ export default function RegisterScreen(): React.JSX.Element {
         </View>
       </View>
 
-      <Card className="gap-4">
+      <Card className="gap-4" variant={isAnomalous ? 'highlight' : 'default'}>
         <SectionTitle showIcon>Estado del medidor</SectionTitle>
         <Text className="text-sm text-content-muted">
           Selecciona la condición observada en campo.
@@ -360,7 +360,7 @@ export default function RegisterScreen(): React.JSX.Element {
       </Card>
 
       {meterStatus !== 'inaccesible' ? (
-        <Card className="gap-4">
+        <Card className="gap-4" variant="highlight">
           <SectionTitle showIcon>Lectura y consumo</SectionTitle>
           <Field error={errors.currentReading?.message} label="Lectura actual">
             <Controller
@@ -432,7 +432,7 @@ export default function RegisterScreen(): React.JSX.Element {
       ) : null}
 
       {meterStatus === 'inaccesible' ? (
-        <Card className="gap-4">
+        <Card className="gap-4" variant={photoRequired ? 'danger' : 'default'}>
           <SectionTitle showIcon>Visita sin lectura</SectionTitle>
           <Field error={errors.reason?.message} label="Motivo de inaccesibilidad">
             <Controller
@@ -577,7 +577,11 @@ export default function RegisterScreen(): React.JSX.Element {
                     accessibilityLabel="Fotografía persistente del medidor"
                     className="h-48 w-full rounded-2xl"
                     onError={() => setPhotoCheck({ path: photoPath, available: false })}
+                    resizeMode="cover"
+                    resizeMethod="resize"
                     source={{ uri: photoPath }}
+                    width={320}
+                    height={192}
                   />
                 </>
               ) : photoCheck?.path === photoPath ? (
@@ -599,7 +603,8 @@ export default function RegisterScreen(): React.JSX.Element {
       <View className="gap-2">
         <PrimaryButton
           disabled={isSubmitting}
-          label={isSubmitting ? 'Guardando...' : 'Guardar lectura'}
+          loading={isSubmitting}
+          label="Guardar lectura"
           onPress={handleSubmit(submit)}
         />
         <GhostButton label="Cancelar" onPress={() => void cancelRegistration()} />
