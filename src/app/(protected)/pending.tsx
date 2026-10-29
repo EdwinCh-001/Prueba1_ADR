@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Text, View } from 'react-native';
 
 import { useReading } from '../../context/reading-context';
 import { findCachedMeter } from '../../repositories/meter-cache-repository';
@@ -8,6 +8,15 @@ import { findAllReadings } from '../../repositories/reading-repository';
 import { isStoredPhotoAvailable } from '../../services/photo-storage';
 import type { Reading } from '../../types/domain';
 import { useSyncState } from '../../providers/sync-provider';
+import {
+  Card,
+  GhostButton,
+  KeyValueRow,
+  Screen,
+  SecondaryButton,
+  StatusChip,
+} from '../../components/ui';
+import type { StatusTone } from '../../components/ui';
 
 function StoredPhotoPreview({ path }: { path: string }): React.JSX.Element {
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
@@ -32,18 +41,22 @@ function StoredPhotoPreview({ path }: { path: string }): React.JSX.Element {
   }, [path]);
 
   if (isAvailable === null) {
-    return <Text style={styles.photoStatus}>Comprobando fotografía...</Text>;
+    return <Text className="text-sm text-content-muted">Comprobando fotografía...</Text>;
   }
   if (!isAvailable) {
-    return <Text style={styles.photoStatus}>Fotografía no disponible en el almacenamiento.</Text>;
+    return (
+      <Text className="text-sm text-content-muted">
+        Fotografía no disponible en el almacenamiento.
+      </Text>
+    );
   }
 
   return (
     <Image
       accessibilityLabel="Fotografía guardada del medidor"
+      className="h-48 w-full rounded-2xl"
       onError={() => setIsAvailable(false)}
       source={{ uri: path }}
-      style={styles.photo}
     />
   );
 }
@@ -52,6 +65,12 @@ const verificationLabels: Record<Reading['verificationStatus'], string> = {
   pendiente: 'Pendiente de verificar',
   verificada: 'Verificada',
   inconsistente: 'Inconsistente: revisar',
+};
+
+const verificationTones: Record<Reading['verificationStatus'], StatusTone> = {
+  pendiente: 'info',
+  verificada: 'success',
+  inconsistente: 'danger',
 };
 
 export default function PendingScreen(): React.JSX.Element {
@@ -79,44 +98,53 @@ export default function PendingScreen(): React.JSX.Element {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.eyebrow}>CONTROL DE LECTURAS</Text>
-      <Text style={styles.title}>Lecturas registradas</Text>
-      {readings.length === 0 ? <Text style={styles.empty}>No hay lecturas registradas.</Text> : null}
+    <Screen>
+      <View className="gap-1">
+        <Text className="text-xs font-bold uppercase tracking-widest text-brand-light">
+          Control de lecturas
+        </Text>
+        <Text className="text-3xl font-extrabold uppercase tracking-wide text-content">
+          Lecturas registradas
+        </Text>
+      </View>
+
+      {readings.length === 0 ? (
+        <Card className="items-center gap-3 py-8">
+          <Text className="text-3xl text-content-muted">≡</Text>
+          <Text className="text-base text-content-muted">No hay lecturas registradas.</Text>
+        </Card>
+      ) : null}
+
       {readings.map((reading) => (
-        <View key={reading.id} style={styles.card}>
-          <Text style={styles.cardTitle}>{reading.meterCode}</Text>
-          <Text>Período: {reading.period}</Text>
-          <Text>Consumo: {reading.consumption ?? 'Sin lectura'}</Text>
-          <Text>Fecha: {new Date(reading.createdAt).toLocaleString()}</Text>
-          <Text>Verificación: {verificationLabels[reading.verificationStatus]}</Text>
-          <Text>Envío: {reading.syncStatus === 'pendiente' ? 'Pendiente de enviar' : 'Enviada'}</Text>
+        <Card className="gap-3" key={reading.id}>
+          <View className="flex-row items-center justify-between gap-3">
+            <Text className="flex-1 text-lg font-bold text-content">{reading.meterCode}</Text>
+            <StatusChip
+              label={reading.syncStatus === 'pendiente' ? 'Pendiente de enviar' : 'Enviada'}
+              tone={reading.syncStatus === 'pendiente' ? 'warning' : 'success'}
+            />
+          </View>
+
+          <View>
+            <KeyValueRow label="Período" value={reading.period} />
+            <KeyValueRow label="Consumo" value={String(reading.consumption ?? 'Sin lectura')} />
+            <KeyValueRow label="Fecha" last value={new Date(reading.createdAt).toLocaleString()} />
+          </View>
+
+          <StatusChip
+            label={verificationLabels[reading.verificationStatus]}
+            tone={verificationTones[reading.verificationStatus]}
+          />
+
           {reading.photoPath ? <StoredPhotoPreview path={reading.photoPath} /> : null}
+
           {reading.syncStatus === 'pendiente' ? (
-            <Pressable onPress={() => void editReading(reading)} style={styles.button}>
-              <Text style={styles.buttonText}>Corregir lectura</Text>
-            </Pressable>
+            <SecondaryButton label="Corregir lectura" onPress={() => void editReading(reading)} />
           ) : null}
-        </View>
+        </Card>
       ))}
-      <Pressable onPress={() => router.replace('/home')} style={styles.secondaryButton}>
-        <Text style={styles.secondaryButtonText}>Volver al inicio</Text>
-      </Pressable>
-    </ScrollView>
+
+      <GhostButton label="Volver al inicio" onPress={() => router.replace('/home')} />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  button: { backgroundColor: '#059669', borderRadius: 10, marginTop: 12, minHeight: 48, justifyContent: 'center', padding: 14 },
-  buttonText: { color: '#FFFFFF', fontWeight: '700', textAlign: 'center' },
-  card: { backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', borderRadius: 12, borderWidth: 1, elevation: 2, gap: 8, marginTop: 14, padding: 16, shadowColor: '#0F172A', shadowOffset: { height: 2, width: 0 }, shadowOpacity: 0.04, shadowRadius: 6 },
-  cardTitle: { color: '#004B87', fontSize: 18, fontWeight: '800' },
-  container: { backgroundColor: '#F8FAFC', flexGrow: 1, padding: 22, paddingBottom: 36, paddingTop: 28 },
-  empty: { color: '#64748B', marginTop: 20 },
-  eyebrow: { color: '#004B87', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
-  secondaryButton: { backgroundColor: '#FFFFFF', borderColor: '#004B87', borderRadius: 10, borderWidth: 1, marginTop: 20, minHeight: 48, justifyContent: 'center', padding: 14 },
-  secondaryButtonText: { color: '#004B87', fontWeight: '700', textAlign: 'center' },
-  photo: { alignSelf: 'flex-start', borderRadius: 10, height: 200, marginTop: 8, width: '100%' },
-  photoStatus: { color: '#64748B', fontSize: 12, marginTop: 8 },
-  title: { color: '#0F172A', fontSize: 27, fontWeight: '900', marginTop: 8 },
-});
