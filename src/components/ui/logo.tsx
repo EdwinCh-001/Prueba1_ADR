@@ -2,6 +2,7 @@ import { Image, View } from 'react-native';
 
 interface LogoPlateProps {
   size?: 'sm' | 'lg';
+  align?: 'start' | 'center';
   className?: string;
 }
 
@@ -15,9 +16,18 @@ const plateSizes: Record<NonNullable<LogoPlateProps['size']>, string> = {
   lg: 'px-4 py-3 rounded-2xl',
 };
 
-export function LogoPlate({ size = 'sm', className = '' }: LogoPlateProps): React.JSX.Element {
+const alignClasses: Record<NonNullable<LogoPlateProps['align']>, string> = {
+  start: 'self-start',
+  center: 'self-center',
+};
+
+export function LogoPlate({
+  size = 'sm',
+  align = 'start',
+  className = '',
+}: LogoPlateProps): React.JSX.Element {
   return (
-    <View className={`self-start bg-white ${plateSizes[size]} ${className}`}>
+    <View className={`${alignClasses[align]} bg-white ${plateSizes[size]} ${className}`}>
       <Image
         accessibilityLabel="Logo de EPMAPS Agua de Quito"
         resizeMode="contain"
