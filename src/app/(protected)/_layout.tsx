@@ -6,12 +6,26 @@ export default function ProtectedLayout(): React.JSX.Element {
   const { isLoading, session } = useSession();
 
   if (isLoading) {
-    return <Stack />;
+    return (
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: 'transparent' },
+        }}
+      />
+    );
   }
 
   if (!session) {
     return <Redirect href="/login" />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: 'transparent' },
+      }}
+    />
+  );
 }

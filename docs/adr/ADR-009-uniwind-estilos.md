@@ -58,6 +58,10 @@ Se adopta un único tema oscuro, sin alternancia claro/oscuro, para minimizar ri
 
 La lógica de negocio, las consultas, los repositorios, las validaciones, la navegación y los textos de alertas y errores no se modifican. Uniwind se ocupa únicamente de la presentación.
 
+### Actualización posterior: tema claro
+
+El 29 de octubre de 2026 se reemplazó el tema oscuro por un tema claro a pedido del usuario. Se mantienen Uniwind, los tokens y la estructura de componentes; solo cambian los valores de `src/global.css`, `userInterfaceStyle` vuelve a `"light"`, la barra de estado pasa a `style="dark"` y el `contentStyle` de los `Stack` se ajusta al nuevo fondo. Los neutros y los colores de estado se oscurecieron para conservar el contraste sobre superficies blancas.
+
 ## Consecuencias
 
 - La interfaz gana coherencia visual y una identidad derivada del logo institucional.
@@ -68,12 +72,12 @@ La lógica de negocio, las consultas, los repositorios, las validaciones, la nav
 - Metro genera `src/uniwind-types.d.ts` al arrancar; sin ese paso, TypeScript no reconoce las clases.
 - Una clase no soportada por React Native puede fallar en silencio, por lo que hay que verificar visualmente cada pantalla.
 - El equipo debe conocer las utilidades de Tailwind y la regla de escribir clases completas, sin interpolación dinámica.
-- El tema oscuro es único: no hay modo claro ni adaptación automática al tema del sistema.
+- No hay alternancia automática entre tema claro y oscuro: el tema vigente se define en `src/global.css`.
 
 ## Verificación
 
 - Revisar `package.json` y confirmar que las únicas dependencias nuevas son `uniwind` y `tailwindcss`.
-- Confirmar que existe `src/global.css` con las importaciones de Tailwind y Uniwind y el bloque `@theme` con los tokens del tema oscuro.
+- Confirmar que existe `src/global.css` con las importaciones de Tailwind y Uniwind y el bloque `@theme` con los tokens del tema vigente.
 - Ejecutar `grep -rn "StyleSheet" src/` y confirmar que no queda ningún resultado.
 - Confirmar que no hay valores hexadecimales fuera de `src/global.css`, salvo el `contentStyle` de los `Stack` que replica el color de fondo.
 - Recorrer Login, Home, Registro de lectura y Lecturas registradas en un dispositivo o emulador y verificar que el banner de conexión y pendientes se ve en todas.

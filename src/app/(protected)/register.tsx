@@ -2,10 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { Alert, Image, Pressable, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, Text, TextInput, View } from 'react-native';
 
 import { meterStatusLabels, useReading } from '../../context/reading-context';
 import { useSession } from '../../context/session-context';
+import { useNotice } from '../../context/notice-context';
 import {
   findReadingById,
   saveReadingAndDeleteDraft,
@@ -51,13 +52,14 @@ const multilineInputClassName =
   'min-h-24 rounded-2xl border border-line bg-field px-4 pt-3 text-base text-content focus:border-brand-light';
 
 const selectedStatusClasses: Record<ReadingForm['meterStatus'], string> = {
-  normal: 'border-action bg-success-soft',
+  normal: 'border-success bg-success-soft',
   inaccesible: 'border-warning bg-warning-soft',
   danado: 'border-danger bg-danger-soft',
 };
 
 export default function RegisterScreen(): React.JSX.Element {
   const { session } = useSession();
+  const { showNotice } = useNotice();
   const { meter, form: savedForm, editingReading, clearReading } = useReading();
   const { isConnected, refreshPendingCount, synchronize } = useSyncState();
   const { control, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<ReadingForm>({
@@ -171,7 +173,7 @@ export default function RegisterScreen(): React.JSX.Element {
           await deleteStoredPhoto(photoPath);
         }
       } catch {
-        Alert.alert('No se pudo cancelar', 'No se pudo eliminar el borrador. Intenta nuevamente.');
+        showNotice({ title: 'No se pudo cancelar', message: 'No se pudo eliminar el borrador. Intenta nuevamente.', tone: 'danger' });
         return;
       }
     }
@@ -191,16 +193,17 @@ export default function RegisterScreen(): React.JSX.Element {
       meter.monthlyAverage,
     );
     if (anomalous && !value.anomalyConfirmed) {
-      Alert.alert('Consumo anómalo', 'Debes confirmar que revisaste el medidor.');
+      showNotice({ title: 'Consumo anómalo', message: 'Debes confirmar que revisaste el medidor.', tone: 'warning' });
       return;
     }
     if (photoRequired && !value.photoPath) {
-      Alert.alert(
-        'Foto obligatoria',
-        value.meterStatus === 'danado'
+      showNotice({
+        title: 'Foto obligatoria',
+        message: value.meterStatus === 'danado'
           ? 'Debes fotografiar el medidor dañado para guardar este registro.'
           : 'El consumo supera tres veces el promedio mensual. Debes fotografiar el medidor para guardar este registro.',
-      );
+        tone: 'warning',
+      });
       return;
     }
 
@@ -209,10 +212,11 @@ export default function RegisterScreen(): React.JSX.Element {
       try {
         const photoAvailable = await isStoredPhotoAvailable(storedPhotoPath);
         if (!photoAvailable && photoRequired) {
-          Alert.alert(
-            'Foto no disponible',
-            'La fotografía obligatoria ya no está en el almacenamiento de la aplicación. Tómala nuevamente para continuar.',
-          );
+          showNotice({
+            title: 'Foto no disponible',
+            message: 'La fotografía obligatoria ya no está en el almacenamiento de la aplicación. Tómala nuevamente para continuar.',
+            tone: 'danger',
+          });
           return;
         }
         if (!photoAvailable) {
@@ -220,10 +224,11 @@ export default function RegisterScreen(): React.JSX.Element {
           setValue('photoPath', null);
         }
       } catch {
-        Alert.alert(
-          'No se pudo validar la foto',
-          'No se pudo comprobar el archivo de la fotografía. Intenta tomarla nuevamente.',
-        );
+        showNotice({
+          title: 'No se pudo validar la foto',
+          message: 'No se pudo comprobar el archivo de la fotografía. Intenta tomarla nuevamente.',
+          tone: 'danger',
+        });
         return;
       }
     }
@@ -249,7 +254,7 @@ export default function RegisterScreen(): React.JSX.Element {
 
     const parsedReading = readingSchema.safeParse(reading);
     if (!parsedReading.success) {
-      Alert.alert('Lectura inválida', 'Verifica que la lectura actual no sea menor que la anterior.');
+      showNotice({ title: 'Lectura inválida', message: 'Verifica que la lectura actual no sea menor que la anterior.', tone: 'danger' });
       return;
     }
 
@@ -257,12 +262,12 @@ export default function RegisterScreen(): React.JSX.Element {
       if (editingReading) {
         const currentReading = await findReadingById(editingReading.id);
         if (!currentReading || currentReading.syncStatus === 'enviada') {
-          Alert.alert('Lectura no editable', 'Esta lectura ya fue enviada y no puede modificarse.');
+          showNotice({ title: 'Lectura no editable', message: 'Esta lectura ya fue enviada y no puede modificarse.', tone: 'warning' });
           return;
         }
         const updated = await updateReading({ ...parsedReading.data, id: editingReading.id });
         if (!updated) {
-          Alert.alert('Lectura no editable', 'La lectura ya fue enviada y no puede modificarse.');
+          showNotice({ title: 'Lectura no editable', message: 'La lectura ya fue enviada y no puede modificarse.', tone: 'warning' });
           return;
         }
       } else {
@@ -271,13 +276,14 @@ export default function RegisterScreen(): React.JSX.Element {
     } catch (error) {
       const message = error instanceof Error ? error.message.toLowerCase() : '';
       if (message.includes('unique') || message.includes('constraint')) {
-        Alert.alert(
-          'Lectura duplicada',
-          'Ya existe una lectura registrada para este medidor durante el período actual.',
-        );
+        showNotice({
+          title: 'Lectura duplicada',
+          message: 'Ya existe una lectura registrada para este medidor durante el período actual.',
+          tone: 'warning',
+        });
         return;
       }
-      Alert.alert('No se pudo guardar', 'La lectura no pudo guardarse. Intenta nuevamente.');
+      showNotice({ title: 'No se pudo guardar', message: 'La lectura no pudo guardarse. Intenta nuevamente.', tone: 'danger' });
       return;
     }
 
@@ -289,22 +295,21 @@ export default function RegisterScreen(): React.JSX.Element {
       void synchronize();
     }
     clearReading();
-    Alert.alert(
-      editingReading ? 'Lectura corregida' : 'Lectura guardada',
-      editingReading
+    showNotice({
+      title: editingReading ? 'Lectura corregida' : 'Lectura guardada',
+      message: editingReading
         ? 'La lectura pendiente fue actualizada.'
         : 'La lectura quedó pendiente de verificación y envío.',
-      [
-      { text: 'Aceptar', onPress: () => router.replace('/home') },
-      ],
-    );
+      tone: 'success',
+      actions: [{ label: 'Aceptar', onPress: () => router.replace('/home') }],
+    });
   };
 
   return (
     <Screen>
-      <View className="overflow-hidden rounded-3xl bg-surface">
+      <View className="overflow-hidden rounded-3xl border border-line/90 bg-surface/85">
         <View className="gap-2 bg-brand p-5">
-          <Text className="text-xs font-bold uppercase tracking-widest text-brand-light">
+          <Text className="text-xs font-bold uppercase tracking-widest text-on-brand">
             Registro de lectura
           </Text>
           <Text className="text-3xl font-extrabold text-white">{meter.code}</Text>
@@ -321,7 +326,7 @@ export default function RegisterScreen(): React.JSX.Element {
       </View>
 
       <Card className="gap-4">
-        <SectionTitle>Estado del medidor</SectionTitle>
+        <SectionTitle showIcon>Estado del medidor</SectionTitle>
         <Text className="text-sm text-content-muted">
           Selecciona la condición observada en campo.
         </Text>
@@ -356,7 +361,7 @@ export default function RegisterScreen(): React.JSX.Element {
 
       {meterStatus !== 'inaccesible' ? (
         <Card className="gap-4">
-          <SectionTitle>Lectura y consumo</SectionTitle>
+          <SectionTitle showIcon>Lectura y consumo</SectionTitle>
           <Field error={errors.currentReading?.message} label="Lectura actual">
             <Controller
               control={control}
@@ -413,7 +418,7 @@ export default function RegisterScreen(): React.JSX.Element {
                         value ? 'border-warning bg-warning' : 'border-warning'
                       }`}
                     >
-                      {value ? <Text className="text-xs font-bold text-on-action">✓</Text> : null}
+                      {value ? <Text className="text-xs font-bold text-white">✓</Text> : null}
                     </View>
                     <Text className="flex-1 text-sm font-bold text-warning">
                       {value ? '✓ Confirmo que revisé el medidor' : 'Toca para confirmar la revisión'}
@@ -428,7 +433,7 @@ export default function RegisterScreen(): React.JSX.Element {
 
       {meterStatus === 'inaccesible' ? (
         <Card className="gap-4">
-          <SectionTitle>Visita sin lectura</SectionTitle>
+          <SectionTitle showIcon>Visita sin lectura</SectionTitle>
           <Field error={errors.reason?.message} label="Motivo de inaccesibilidad">
             <Controller
               control={control}
@@ -453,7 +458,7 @@ export default function RegisterScreen(): React.JSX.Element {
 
       {meterStatus === 'danado' ? (
         <Card className="gap-4">
-          <SectionTitle>Detalle del daño</SectionTitle>
+          <SectionTitle showIcon>Detalle del daño</SectionTitle>
           <Field error={errors.damageDescription?.message} label="Descripción del daño">
             <Controller
               control={control}
@@ -486,6 +491,8 @@ export default function RegisterScreen(): React.JSX.Element {
               <StatusChip
                 label={photoRequired ? 'Obligatoria' : 'Opcional'}
                 tone={photoRequired ? 'danger' : 'neutral'}
+                showIcon
+                className={photoRequired ? 'border-danger' : ''}
               />
             </View>
             {value ? (
@@ -515,12 +522,13 @@ export default function RegisterScreen(): React.JSX.Element {
                 try {
                   const result = await captureMeterPhoto();
                   if (result.denied) {
-                    Alert.alert(
-                      'Permiso de cámara denegado',
-                      photoRequired
+                    showNotice({
+                      title: 'Permiso de cámara denegado',
+                      message: photoRequired
                         ? 'La cámara es necesaria para fotografiar un medidor dañado o documentar un consumo anómalo. Sin esa foto obligatoria no se puede guardar el registro. Habilita el permiso en Ajustes y vuelve a intentarlo.'
                         : 'La cámara permite adjuntar una fotografía de respaldo. En este registro la foto es opcional, por lo que puedes cerrar este aviso y continuar sin foto.',
-                    );
+                      tone: photoRequired ? 'warning' : 'info',
+                    });
                     return;
                   }
                   if (result.path) {
@@ -538,10 +546,11 @@ export default function RegisterScreen(): React.JSX.Element {
                       });
                     } catch {
                       await deleteStoredPhoto(result.path);
-                      Alert.alert(
-                        'No se pudo guardar el borrador',
-                        'La fotografía no quedó asociada al registro. Intenta tomarla nuevamente.',
-                      );
+                      showNotice({
+                        title: 'No se pudo guardar el borrador',
+                        message: 'La fotografía no quedó asociada al registro. Intenta tomarla nuevamente.',
+                        tone: 'danger',
+                      });
                       return;
                     }
                     if (photoPath && photoPath !== result.path) {
@@ -550,10 +559,11 @@ export default function RegisterScreen(): React.JSX.Element {
                     onChange(result.path);
                   }
                 } catch {
-                  Alert.alert(
-                    'No se pudo guardar la foto',
-                    'No se pudo conservar la fotografía en el almacenamiento de la aplicación. Intenta nuevamente.',
-                  );
+                  showNotice({
+                    title: 'No se pudo guardar la foto',
+                    message: 'No se pudo conservar la fotografía en el almacenamiento de la aplicación. Intenta nuevamente.',
+                    tone: 'danger',
+                  });
                 }
               }}
             />

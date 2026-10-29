@@ -2,35 +2,38 @@
 @import 'uniwind';
 
 @theme {
-  /* Neutros (referencia) */
-  --color-background: #1c1c1e;
-  --color-surface: #2c2c2e;
-  --color-surface-raised: #363638;
-  --color-field: #232325;
-  --color-line: #3a3a3c;
+  /* Neutros (tema claro) */
+  --color-background: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-surface-raised: #eef1f5;
+  --color-field: #ffffff;
+  --color-line: #b8c3ce;
 
   /* Texto */
-  --color-content: #ffffff;
-  --color-content-muted: #a1a1a6;
-  --color-content-subtle: #8e8e93;
+  --color-content: #16202a;
+  --color-content-muted: #394957;
+  --color-content-subtle: #526170;
 
   /* Marca (logo EPMAPS) */
   --color-brand: #02519c;
   --color-brand-dark: #0a3a6e;
-  --color-brand-light: #5aa9f0;
-  --color-brand-soft: #12325a;
-  --color-accent-red: #e03030;
+  --color-brand-light: #0b63b0;
+  --color-brand-soft: #e8f1fb;
+  --color-on-brand: #eaf3fd;
+  --color-accent-red: #c6283d;
+  --color-accent-red-soft: #fdecef;
 
-  /* Acción (botones verde menta de la referencia) */
-  --color-action: #3ddc8e;
-  --color-action-pressed: #2fbf78;
-  --color-on-action: #0b1f14;
+  /* Acción principal */
+  --color-action: #c6283d;
+  --color-action-pressed: #a91f32;
+  --color-on-action: #ffffff;
 
   /* Estados */
-  --color-success: #3ddc8e;
-  --color-success-soft: #17382a;
-  --color-warning: #f5a524;
-  --color-warning-soft: #3a2e14;
-  --color-danger: #ff6b6b;
-  --color-danger-soft: #3c2022;
+  --color-success: #0f8a4f;
+  --color-success-soft: #e4f6ec;
+  --color-success-border: #0f8a4f;
+  --color-warning: #a35f00;
+  --color-warning-soft: #fdf1dc;
+  --color-danger: #c62f2f;
+  --color-danger-soft: #fdeaea;
 }

@@ -1,4 +1,6 @@
 export { GhostButton, PrimaryButton, SecondaryButton } from './button';
+export { Icon } from './icon';
+export type { IconName } from './icon';
 export { Badge } from './badge';
 export { Card } from './card';
 export { Field } from './field';

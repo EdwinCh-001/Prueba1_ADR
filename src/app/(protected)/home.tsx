@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Alert, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Text, TextInput, View } from 'react-native';
 
 import { useSession } from '../../context/session-context';
+import { useNotice } from '../../context/notice-context';
 import { useReading } from '../../context/reading-context';
 import { deleteDraft, findDraftByEmployee } from '../../repositories/draft-repository';
 import { deleteStoredPhoto } from '../../services/photo-storage';
@@ -32,6 +33,7 @@ import {
 
 export default function HomeScreen(): React.JSX.Element {
   const { session, signOut } = useSession();
+  const { showNotice } = useNotice();
   const { setForm, setMeter } = useReading();
   const { isConnected, pendingCount } = useSyncState();
   const [meterCode, setMeterCode] = useState('');
@@ -54,11 +56,11 @@ export default function HomeScreen(): React.JSX.Element {
         await deleteDraft(session.employeeCode);
         await deleteStoredPhoto(photoPath);
         if (message && isActive) {
-          Alert.alert('Borrador descartado', message);
+          showNotice({ title: 'Borrador descartado', message, tone: 'success' });
         }
       } catch {
         if (isActive) {
-          Alert.alert('Error', 'No se pudo eliminar el borrador guardado.');
+          showNotice({ title: 'Error', message: 'No se pudo eliminar el borrador guardado.', tone: 'danger' });
         }
       }
     };
@@ -118,20 +120,18 @@ export default function HomeScreen(): React.JSX.Element {
           return;
         }
 
-        Alert.alert('Registro pendiente', '¿Deseas continuar el registro guardado?', [
-          {
-            text: 'Descartar',
-            style: 'destructive',
-            onPress: () => void discardDraft(draft.photoPath),
-          },
-          {
-            text: 'Continuar',
-            onPress: () => void restoreDraft(draft.payloadJson, draft.photoPath),
-          },
-        ]);
+        showNotice({
+          title: 'Registro pendiente',
+          message: '¿Deseas continuar el registro guardado?',
+          tone: 'info',
+          actions: [
+            { label: 'Descartar', destructive: true, onPress: () => void discardDraft(draft.photoPath) },
+            { label: 'Continuar', onPress: () => void restoreDraft(draft.payloadJson, draft.photoPath) },
+          ],
+        });
       } catch {
         if (isActive) {
-          Alert.alert('Error', 'No se pudo revisar el registro guardado.');
+          showNotice({ title: 'Error', message: 'No se pudo revisar el registro guardado.', tone: 'danger' });
         }
       }
     };
@@ -140,7 +140,7 @@ export default function HomeScreen(): React.JSX.Element {
     return () => {
       isActive = false;
     };
-  }, [session, setForm, setMeter]);
+  }, [session, setForm, setMeter, showNotice]);
 
   const handleSignOut = async (): Promise<void> => {
     await signOut();
@@ -159,16 +159,21 @@ export default function HomeScreen(): React.JSX.Element {
 
   return (
     <Screen>
-      <View className="gap-4">
-        <LogoPlate size="sm" />
+      <View className="relative overflow-hidden rounded-[32px] bg-brand-dark p-5">
+        <View className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand" />
+        <View className="absolute -bottom-12 right-10 h-20 w-20 rounded-full bg-brand-light/50" />
+        <LogoPlate size="sm" tone="white" />
         <View className="flex-row items-center justify-between gap-4">
-          <Text className="flex-1 text-3xl font-extrabold uppercase tracking-wide text-content">
+          <Text className="flex-1 text-3xl font-extrabold uppercase tracking-wide text-white">
             Hola, {session?.employeeCode}
           </Text>
-          <View className="h-11 w-11 items-center justify-center rounded-full border border-content-muted">
-            <Text className="text-sm font-bold text-content">{initials}</Text>
+          <View className="-mt-3 h-14 w-14 items-center justify-center rounded-full border-2 border-white/60 bg-white/10">
+            <Text className="text-lg font-extrabold text-white">{initials}</Text>
           </View>
         </View>
+        <Text className="mt-2 text-sm font-semibold uppercase tracking-widest text-on-brand">
+          Control de lecturas en campo
+        </Text>
       </View>
 
       <Card className="gap-5">
@@ -187,7 +192,7 @@ export default function HomeScreen(): React.JSX.Element {
       </Card>
 
       <View className="gap-3">
-        <SectionTitle>Consultar medidor</SectionTitle>
+        <SectionTitle>Busca un medidor</SectionTitle>
         <Card className="gap-4">
           <Controller
             control={control}
@@ -216,7 +221,7 @@ export default function HomeScreen(): React.JSX.Element {
 
       {meterQuery.isFetching ? (
         <View className="flex-row items-center gap-3">
-          <ActivityIndicator colorClassName="accent-action" />
+          <ActivityIndicator colorClassName="accent-brand-light" />
           <Text className="text-sm text-content-muted">Consultando...</Text>
         </View>
       ) : null}
@@ -227,11 +232,11 @@ export default function HomeScreen(): React.JSX.Element {
       ) : null}
 
       {visibleMeter ? (
-        <View className="overflow-hidden rounded-3xl bg-surface">
+        <View className="overflow-hidden rounded-3xl border border-line/90 bg-surface/85 shadow-sm">
           <View className="relative gap-2 overflow-hidden bg-brand p-5">
             <View className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-brand-dark" />
             <View className="absolute -right-2 top-16 h-14 w-14 rounded-full bg-brand-dark" />
-            <Text className="text-xs font-bold uppercase tracking-widest text-brand-light">
+            <Text className="text-xs font-bold uppercase tracking-widest text-on-brand">
               Medidor
             </Text>
             <Text className="text-3xl font-extrabold text-white">{visibleMeter.code}</Text>

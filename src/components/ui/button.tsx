@@ -43,7 +43,7 @@ export function GhostButton({
   return (
     <Pressable
       accessibilityRole="button"
-      className="h-12 items-center justify-center rounded-full active:bg-surface"
+      className="h-12 items-center justify-center rounded-full active:bg-surface-raised"
       onPress={onPress}
     >
       <Text className={`text-base font-semibold ${textClass}`}>{label}</Text>

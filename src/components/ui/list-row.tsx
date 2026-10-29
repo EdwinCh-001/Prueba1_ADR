@@ -11,7 +11,7 @@ export function ListRow({ glyph, title, subtitle, onPress }: ListRowProps): Reac
   return (
     <Pressable
       accessibilityRole="button"
-      className="flex-row items-center gap-4 rounded-3xl bg-surface p-4 active:bg-surface-raised"
+      className="flex-row items-center gap-4 rounded-3xl border border-line/90 bg-surface/85 p-4 shadow-sm active:bg-surface-raised"
       onPress={onPress}
     >
       <View className="h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft">
@@ -19,9 +19,9 @@ export function ListRow({ glyph, title, subtitle, onPress }: ListRowProps): Reac
       </View>
       <View className="flex-1 gap-1">
         <Text className="text-base font-bold text-content">{title}</Text>
-        <Text className="text-sm text-action">{subtitle}</Text>
+        <Text className="text-sm text-success">{subtitle}</Text>
       </View>
-      <Text className="text-2xl text-action">›</Text>
+      <Text className="text-2xl text-brand-light">›</Text>
     </Pressable>
   );
 }

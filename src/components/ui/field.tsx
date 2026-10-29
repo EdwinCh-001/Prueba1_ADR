@@ -8,7 +8,9 @@ interface FieldProps extends React.PropsWithChildren {
 export function Field({ label, error, children }: FieldProps): React.JSX.Element {
   return (
     <View className="gap-2">
-      <Text className="text-sm font-semibold text-content-muted">{label}</Text>
+      <View className="flex-row items-center gap-2">
+        <Text className="text-sm font-semibold text-content-muted">{label}</Text>
+      </View>
       {children}
       {error ? <Text className="text-sm text-danger">{error}</Text> : null}
     </View>

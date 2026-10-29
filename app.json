@@ -2,6 +2,7 @@
   "expo": {
     "name": "Prueba1-app",
     "slug": "Prueba1-app",
+    "scheme": "prueba1app",
     "version": "1.0.0",
     "orientation": "portrait",
     "platforms": [
@@ -9,11 +10,12 @@
       "ios"
     ],
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE"
       },

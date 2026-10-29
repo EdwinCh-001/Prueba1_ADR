@@ -4,16 +4,12 @@ interface LogoPlateProps {
   size?: 'sm' | 'lg';
   align?: 'start' | 'center';
   className?: string;
+  tone?: 'default' | 'white';
 }
 
 const imageSizes: Record<NonNullable<LogoPlateProps['size']>, string> = {
-  sm: 'h-9 w-20',
-  lg: 'h-14 w-28',
-};
-
-const plateSizes: Record<NonNullable<LogoPlateProps['size']>, string> = {
-  sm: 'px-2 py-1 rounded-xl',
-  lg: 'px-4 py-3 rounded-2xl',
+  sm: 'h-14 w-28',
+  lg: 'h-32 w-64',
 };
 
 const alignClasses: Record<NonNullable<LogoPlateProps['align']>, string> = {
@@ -25,16 +21,16 @@ export function LogoPlate({
   size = 'sm',
   align = 'start',
   className = '',
+  tone = 'default',
 }: LogoPlateProps): React.JSX.Element {
   return (
-    <View className={`${alignClasses[align]} bg-white ${plateSizes[size]} ${className}`}>
-      <Image
-        accessibilityLabel="Logo de EPMAPS Agua de Quito"
-        resizeMode="contain"
-        source={require('../../../assets/Logo.jpg')}
-        className={imageSizes[size]}
-      />
-    </View>
+    <Image
+      accessibilityLabel="Logo institucional"
+      className={`${alignClasses[align]} ${imageSizes[size]} ${className}`}
+      resizeMode="contain"
+      source={require('../../../assets/Logo.png')}
+      tintColor={tone === 'white' ? '#FFFFFF' : undefined}
+    />
   );
 }
 

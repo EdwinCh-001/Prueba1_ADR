@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Image, Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
 import { useReading } from '../../context/reading-context';
+import { useNotice } from '../../context/notice-context';
 import { findCachedMeter } from '../../repositories/meter-cache-repository';
 import { findAllReadings } from '../../repositories/reading-repository';
 import { isStoredPhotoAvailable } from '../../services/photo-storage';
@@ -75,6 +76,7 @@ const verificationTones: Record<Reading['verificationStatus'], StatusTone> = {
 
 export default function PendingScreen(): React.JSX.Element {
   const { setMeter, setEditingReading } = useReading();
+  const { showNotice } = useNotice();
   const { pendingCount } = useSyncState();
   const [readings, setReadings] = useState<Reading[]>([]);
 
@@ -84,12 +86,12 @@ export default function PendingScreen(): React.JSX.Element {
 
   const editReading = async (reading: Reading): Promise<void> => {
     if (reading.syncStatus === 'enviada') {
-      Alert.alert('Lectura enviada', 'Una lectura enviada no puede modificarse.');
+      showNotice({ title: 'Lectura enviada', message: 'Una lectura enviada no puede modificarse.', tone: 'warning' });
       return;
     }
     const meter = await findCachedMeter(reading.meterCode);
     if (!meter) {
-      Alert.alert('Medidor no disponible', 'Consulta el medidor nuevamente para editar esta lectura.');
+      showNotice({ title: 'Medidor no disponible', message: 'Consulta el medidor nuevamente para editar esta lectura.', tone: 'danger' });
       return;
     }
     setMeter(meter);
@@ -99,12 +101,16 @@ export default function PendingScreen(): React.JSX.Element {
 
   return (
     <Screen>
-      <View className="gap-1">
-        <Text className="text-xs font-bold uppercase tracking-widest text-brand-light">
+      <View className="relative overflow-hidden rounded-[32px] bg-brand-dark p-5">
+        <View className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-brand" />
+        <Text className="text-xs font-bold uppercase tracking-widest text-on-brand">
           Control de lecturas
         </Text>
-        <Text className="text-3xl font-extrabold uppercase tracking-wide text-content">
+        <Text className="mt-2 text-3xl font-extrabold uppercase tracking-wide text-white">
           Lecturas registradas
+        </Text>
+        <Text className="mt-2 text-sm font-semibold text-on-brand">
+          Revisa el estado de cada lectura y sus verificaciones de campo
         </Text>
       </View>
 
@@ -122,6 +128,7 @@ export default function PendingScreen(): React.JSX.Element {
             <StatusChip
               label={reading.syncStatus === 'pendiente' ? 'Pendiente de enviar' : 'Enviada'}
               tone={reading.syncStatus === 'pendiente' ? 'warning' : 'success'}
+              showIcon
             />
           </View>
 
@@ -134,6 +141,7 @@ export default function PendingScreen(): React.JSX.Element {
           <StatusChip
             label={verificationLabels[reading.verificationStatus]}
             tone={verificationTones[reading.verificationStatus]}
+            showIcon
           />
 
           {reading.photoPath ? <StoredPhotoPreview path={reading.photoPath} /> : null}

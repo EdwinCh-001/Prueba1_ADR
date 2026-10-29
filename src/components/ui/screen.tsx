@@ -17,7 +17,7 @@ export function Screen({
 }: ScreenProps): React.JSX.Element {
   return (
     <ScrollView
-      className="flex-1 bg-background"
+      className="flex-1 bg-transparent"
       contentContainerClassName={`px-5 pt-6 pb-10 gap-5 ${contentContainerClassName}`}
       keyboardShouldPersistTaps="handled"
     >
