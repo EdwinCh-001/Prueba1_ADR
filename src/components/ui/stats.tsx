@@ -5,19 +5,26 @@ export interface StatItem {
   label: string;
   value: string;
   valueClassName?: string;
+  labelClassName?: string;
 }
 
 interface StatTileProps {
   label: string;
   value: string;
   valueClassName?: string;
+  labelClassName?: string;
 }
 
-export function StatTile({ label, value, valueClassName = 'text-content' }: StatTileProps): React.JSX.Element {
+export function StatTile({
+  label,
+  value,
+  valueClassName = 'text-content',
+  labelClassName = 'text-content-muted',
+}: StatTileProps): React.JSX.Element {
   return (
     <View className="flex-1 items-center gap-1">
       <Text className={`text-2xl font-extrabold ${valueClassName}`}>{value}</Text>
-      <Text className="text-center text-xs text-content-muted">{label}</Text>
+      <Text className={`text-center text-xs ${labelClassName}`}>{label}</Text>
     </View>
   );
 }
@@ -32,7 +39,12 @@ export function StatsRow({ items }: StatsRowProps): React.JSX.Element {
       {items.map((item, index) => (
         <Fragment key={item.label}>
           {index > 0 ? <View className="h-10 w-px bg-line" /> : null}
-          <StatTile label={item.label} value={item.value} valueClassName={item.valueClassName} />
+          <StatTile
+            label={item.label}
+            labelClassName={item.labelClassName}
+            value={item.value}
+            valueClassName={item.valueClassName}
+          />
         </Fragment>
       ))}
     </View>

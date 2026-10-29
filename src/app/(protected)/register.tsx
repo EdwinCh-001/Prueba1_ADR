@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, Text, TextInput, View } from 'react-native';
 
 import { meterStatusLabels, useReading } from '../../context/reading-context';
 import { useSession } from '../../context/session-context';
@@ -26,12 +26,35 @@ import {
   readingSchema,
 } from '../../types/schemas';
 import { useSyncState } from '../../providers/sync-provider';
+import {
+  AccentBar,
+  Card,
+  Field,
+  GhostButton,
+  PrimaryButton,
+  Screen,
+  SecondaryButton,
+  SectionTitle,
+  StatsRow,
+  StatusChip,
+} from '../../components/ui';
 
 const getPeriod = (): string => new Date().toISOString().slice(0, 7);
 const getTimestamp = (): string => new Date().toISOString();
 const getClientId = (): string =>
   globalThis.crypto?.randomUUID?.() ??
   `reading-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+const consumptionInputClassName =
+  'h-16 rounded-2xl border border-line bg-field px-4 text-center text-3xl font-bold text-content focus:border-brand-light';
+const multilineInputClassName =
+  'min-h-24 rounded-2xl border border-line bg-field px-4 pt-3 text-base text-content focus:border-brand-light';
+
+const selectedStatusClasses: Record<ReadingForm['meterStatus'], string> = {
+  normal: 'border-action bg-success-soft',
+  inaccesible: 'border-warning bg-warning-soft',
+  danado: 'border-danger bg-danger-soft',
+};
 
 export default function RegisterScreen(): React.JSX.Element {
   const { session } = useSession();
@@ -131,12 +154,12 @@ export default function RegisterScreen(): React.JSX.Element {
 
   if (!meter || !session) {
     return (
-      <View style={styles.centered}>
-        <Text>No hay un medidor seleccionado.</Text>
-        <Pressable onPress={() => router.replace('/home')} style={styles.button}>
-          <Text style={styles.buttonText}>Volver</Text>
-        </Pressable>
-      </View>
+      <Screen contentContainerClassName="justify-center">
+        <Card className="items-center gap-4">
+          <Text className="text-center text-base text-content">No hay un medidor seleccionado.</Text>
+          <PrimaryButton label="Volver" onPress={() => router.replace('/home')} />
+        </Card>
+      </Screen>
     );
   }
 
@@ -278,15 +301,31 @@ export default function RegisterScreen(): React.JSX.Element {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.eyebrow}>REGISTRO DE LECTURA</Text>
-      <Text style={styles.title}>{meter.code}</Text>
-      <Text style={styles.subtitle}>Lectura anterior: {meter.previousReading}</Text>
+    <Screen>
+      <View className="overflow-hidden rounded-3xl bg-surface">
+        <View className="gap-2 bg-brand p-5">
+          <Text className="text-xs font-bold uppercase tracking-widest text-brand-light">
+            Registro de lectura
+          </Text>
+          <Text className="text-3xl font-extrabold text-white">{meter.code}</Text>
+        </View>
+        <AccentBar />
+        <View className="p-5">
+          <StatsRow
+            items={[
+              { label: 'Lectura anterior', value: String(meter.previousReading) },
+              { label: 'Promedio mensual', value: String(meter.monthlyAverage) },
+            ]}
+          />
+        </View>
+      </View>
 
-      <View style={styles.formCard}>
-        <Text style={styles.sectionTitle}>Estado del medidor</Text>
-        <Text style={styles.sectionSubtitle}>Selecciona la condición observada en campo.</Text>
-        <View style={styles.options}>
+      <Card className="gap-4">
+        <SectionTitle>Estado del medidor</SectionTitle>
+        <Text className="text-sm text-content-muted">
+          Selecciona la condición observada en campo.
+        </Text>
+        <View className="flex-row gap-2">
           {(Object.keys(meterStatusLabels) as ReadingForm['meterStatus'][]).map((status) => (
             <Controller
               control={control}
@@ -294,10 +333,18 @@ export default function RegisterScreen(): React.JSX.Element {
               name="meterStatus"
               render={({ field: { onChange, value } }) => (
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: value === status }}
+                  className={`flex-1 items-center rounded-2xl border py-3 ${
+                    value === status ? selectedStatusClasses[status] : 'border-line bg-field'
+                  }`}
                   onPress={() => onChange(status)}
-                  style={[styles.option, value === status && styles.selectedOption]}
                 >
-                  <Text style={value === status ? styles.selectedOptionText : styles.optionText}>
+                  <Text
+                    className={`text-center text-sm font-bold ${
+                      value === status ? 'text-content' : 'text-content-muted'
+                    }`}
+                  >
                     {meterStatusLabels[status]}
                   </Text>
                 </Pressable>
@@ -305,34 +352,43 @@ export default function RegisterScreen(): React.JSX.Element {
             />
           ))}
         </View>
-      </View>
+      </Card>
 
       {meterStatus !== 'inaccesible' ? (
-        <View style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Lectura y consumo</Text>
-          <Text style={styles.label}>Lectura actual</Text>
-          <Controller
-            control={control}
-            name="currentReading"
-            render={({ field: { onBlur, onChange, value } }) => (
-              <TextInput
-                keyboardType="decimal-pad"
-                onBlur={onBlur}
-                onChangeText={(text) => {
-                  onChange(text);
-                }}
-                placeholder="Ej. 135"
-                style={styles.input}
-                value={value}
-              />
-            )}
-          />
-          {errors.currentReading ? <Text style={styles.error}>{errors.currentReading.message}</Text> : null}
+        <Card className="gap-4">
+          <SectionTitle>Lectura y consumo</SectionTitle>
+          <Field error={errors.currentReading?.message} label="Lectura actual">
+            <Controller
+              control={control}
+              name="currentReading"
+              render={({ field: { onBlur, onChange, value } }) => (
+                <TextInput
+                  className={consumptionInputClassName}
+                  keyboardType="decimal-pad"
+                  onBlur={onBlur}
+                  onChangeText={(text) => {
+                    onChange(text);
+                  }}
+                  placeholder="Ej. 135"
+                  placeholderTextColorClassName="accent-content-subtle"
+                  value={value}
+                />
+              )}
+            />
+          </Field>
           {consumption !== null ? (
-            <View style={styles.consumptionCard}>
-              <Text style={styles.consumptionLabel}>CONSUMO CALCULADO</Text>
-              <Text style={styles.consumptionValue}>{consumption}</Text>
-              <Text style={styles.consumptionUnit}>unidades</Text>
+            <View className="items-center gap-1 rounded-2xl border border-line bg-field p-5">
+              <Text className="text-xs font-bold uppercase tracking-widest text-content-muted">
+                Consumo calculado
+              </Text>
+              <Text
+                className={`text-5xl font-extrabold ${
+                  isAnomalous ? 'text-warning' : 'text-success'
+                }`}
+              >
+                {consumption}
+              </Text>
+              <Text className="text-sm text-content-muted">unidades</Text>
             </View>
           ) : null}
           {isAnomalous ? (
@@ -340,77 +396,121 @@ export default function RegisterScreen(): React.JSX.Element {
               control={control}
               name="anomalyConfirmed"
               render={({ field: { onChange, value } }) => (
-                <Pressable onPress={() => onChange(!value)} style={styles.confirmation}>
-                  <Text style={styles.warning}>Consumo anómalo</Text>
-                  <Text style={styles.warningDescription}>Supera tres veces el promedio mensual.</Text>
-                  <Text style={styles.confirmationText}>
-                    {value ? '✓ Confirmo que revisé el medidor' : 'Toca para confirmar la revisión'}
+                <View className="gap-3 rounded-2xl border border-warning bg-warning-soft p-4">
+                  <Text className="text-2xl text-warning">⚠</Text>
+                  <Text className="text-base font-bold text-warning">Consumo anómalo</Text>
+                  <Text className="text-sm text-warning">
+                    Supera tres veces el promedio mensual.
                   </Text>
-                </Pressable>
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: Boolean(value) }}
+                    className="flex-row items-center gap-3"
+                    onPress={() => onChange(!value)}
+                  >
+                    <View
+                      className={`h-6 w-6 items-center justify-center rounded-md border-2 ${
+                        value ? 'border-warning bg-warning' : 'border-warning'
+                      }`}
+                    >
+                      {value ? <Text className="text-xs font-bold text-on-action">✓</Text> : null}
+                    </View>
+                    <Text className="flex-1 text-sm font-bold text-warning">
+                      {value ? '✓ Confirmo que revisé el medidor' : 'Toca para confirmar la revisión'}
+                    </Text>
+                  </Pressable>
+                </View>
               )}
             />
           ) : null}
-        </View>
+        </Card>
       ) : null}
 
       {meterStatus === 'inaccesible' ? (
-        <View style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Visita sin lectura</Text>
-          <Text style={styles.label}>Motivo de inaccesibilidad</Text>
-          <Controller
-            control={control}
-            name="reason"
-            render={({ field: { onBlur, onChange, value } }) => (
-              <TextInput
-                multiline
-                onBlur={onBlur}
-                onChangeText={onChange}
-                placeholder="Indica por qué no fue posible acceder"
-                style={[styles.input, styles.multiline]}
-                value={value}
-              />
-            )}
-          />
-          {errors.reason ? <Text style={styles.error}>{errors.reason.message}</Text> : null}
-        </View>
+        <Card className="gap-4">
+          <SectionTitle>Visita sin lectura</SectionTitle>
+          <Field error={errors.reason?.message} label="Motivo de inaccesibilidad">
+            <Controller
+              control={control}
+              name="reason"
+              render={({ field: { onBlur, onChange, value } }) => (
+                <TextInput
+                  className={multilineInputClassName}
+                  multiline
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  placeholder="Indica por qué no fue posible acceder"
+                  placeholderTextColorClassName="accent-content-subtle"
+                  // textAlignVertical no tiene equivalente en className.
+                  style={{ textAlignVertical: 'top' }}
+                  value={value}
+                />
+              )}
+            />
+          </Field>
+        </Card>
       ) : null}
 
       {meterStatus === 'danado' ? (
-        <View style={styles.formCard}>
-          <Text style={styles.sectionTitle}>Detalle del daño</Text>
-          <Text style={styles.label}>Descripción del daño</Text>
-          <Controller
-            control={control}
-            name="damageDescription"
-            render={({ field: { onBlur, onChange, value } }) => (
-              <TextInput
-                multiline
-                onBlur={onBlur}
-                onChangeText={onChange}
-                placeholder="Describe el daño observado"
-                style={[styles.input, styles.multiline]}
-                value={value}
-              />
-            )}
-          />
-          {errors.damageDescription ? <Text style={styles.error}>{errors.damageDescription.message}</Text> : null}
-        </View>
+        <Card className="gap-4">
+          <SectionTitle>Detalle del daño</SectionTitle>
+          <Field error={errors.damageDescription?.message} label="Descripción del daño">
+            <Controller
+              control={control}
+              name="damageDescription"
+              render={({ field: { onBlur, onChange, value } }) => (
+                <TextInput
+                  className={multilineInputClassName}
+                  multiline
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  placeholder="Describe el daño observado"
+                  placeholderTextColorClassName="accent-content-subtle"
+                  // textAlignVertical no tiene equivalente en className.
+                  style={{ textAlignVertical: 'top' }}
+                  value={value}
+                />
+              )}
+            />
+          </Field>
+        </Card>
       ) : null}
 
       <Controller
         control={control}
         name="photoPath"
         render={({ field: { onChange, value } }) => (
-          <View style={[styles.formCard, styles.photoSection]}>
-            <Text style={styles.label}>
-              Fotografía del medidor{photoRequired ? ' (obligatoria)' : ' (opcional)'}
-            </Text>
-            <Text style={styles.info}>
-              {photoRequired
-                ? 'Se requiere para medidores dañados o consumos anómalos.'
-                : 'Puedes adjuntar una foto como respaldo; también puedes continuar sin ella.'}
-            </Text>
-            <Pressable
+          <Card className="gap-4">
+            <View className="flex-row items-center justify-between gap-3">
+              <Text className="flex-1 text-lg font-bold text-content">Fotografía del medidor</Text>
+              <StatusChip
+                label={photoRequired ? 'Obligatoria' : 'Opcional'}
+                tone={photoRequired ? 'danger' : 'neutral'}
+              />
+            </View>
+            {value ? (
+              <Text className="text-sm text-content-muted">
+                {photoRequired
+                  ? 'Se requiere para medidores dañados o consumos anómalos.'
+                  : 'Puedes adjuntar una foto como respaldo; también puedes continuar sin ella.'}
+              </Text>
+            ) : (
+              <View className="rounded-2xl border border-dashed border-line p-5">
+                <Text className="text-sm text-content-muted">
+                  {photoRequired
+                    ? 'Se requiere para medidores dañados o consumos anómalos.'
+                    : 'Puedes adjuntar una foto como respaldo; también puedes continuar sin ella.'}
+                </Text>
+              </View>
+            )}
+            <SecondaryButton
+              label={
+                value
+                  ? 'Volver a tomar fotografía'
+                  : photoRequired
+                    ? 'Tomar fotografía requerida'
+                    : 'Agregar fotografía (opcional)'
+              }
               onPress={async () => {
                 try {
                   const result = await captureMeterPhoto();
@@ -456,84 +556,44 @@ export default function RegisterScreen(): React.JSX.Element {
                   );
                 }
               }}
-              style={styles.secondaryButton}
-            >
-              <Text style={styles.secondaryText}>
-                {value
-                  ? 'Volver a tomar fotografía'
-                  : photoRequired
-                    ? 'Tomar fotografía requerida'
-                    : 'Agregar fotografía (opcional)'}
-              </Text>
-            </Pressable>
+            />
             {photoPath ? (
               photoCheck?.path === photoPath && photoCheck.available ? (
                 <>
-                  <Text style={styles.info}>Fotografía guardada en el almacenamiento de la aplicación.</Text>
+                  <Text className="text-sm text-content-muted">
+                    Fotografía guardada en el almacenamiento de la aplicación.
+                  </Text>
                   <Image
                     accessibilityLabel="Fotografía persistente del medidor"
+                    className="h-48 w-full rounded-2xl"
                     onError={() => setPhotoCheck({ path: photoPath, available: false })}
                     source={{ uri: photoPath }}
-                    style={styles.photoPreview}
                   />
                 </>
               ) : photoCheck?.path === photoPath ? (
-                <Text style={photoRequired ? styles.error : styles.info}>
+                <Text className={`text-sm ${photoRequired ? 'text-danger' : 'text-content-muted'}`}>
                   {photoRequired
                     ? 'La fotografía no está disponible. Debes tomarla nuevamente para guardar.'
                     : 'La fotografía opcional no está disponible; puedes continuar sin ella.'}
                 </Text>
               ) : (
-                <Text style={styles.info}>Comprobando que la fotografía esté guardada...</Text>
+                <Text className="text-sm text-content-muted">
+                  Comprobando que la fotografía esté guardada...
+                </Text>
               )
             ) : null}
-          </View>
+          </Card>
         )}
       />
 
-      <Pressable disabled={isSubmitting} onPress={handleSubmit(submit)} style={styles.button}>
-        <Text style={styles.buttonText}>{isSubmitting ? 'Guardando...' : 'Guardar lectura'}</Text>
-      </Pressable>
-      <Pressable onPress={() => void cancelRegistration()} style={styles.cancelButton}>
-        <Text style={styles.cancelText}>Cancelar</Text>
-      </Pressable>
-    </ScrollView>
+      <View className="gap-2">
+        <PrimaryButton
+          disabled={isSubmitting}
+          label={isSubmitting ? 'Guardando...' : 'Guardar lectura'}
+          onPress={handleSubmit(submit)}
+        />
+        <GhostButton label="Cancelar" onPress={() => void cancelRegistration()} />
+      </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  button: { alignItems: 'center', backgroundColor: '#059669', borderRadius: 11, marginTop: 22, minHeight: 54, justifyContent: 'center', padding: 16 },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
-  cancelButton: { alignItems: 'center', marginTop: 10, minHeight: 48, justifyContent: 'center', padding: 12 },
-  cancelText: { color: '#64748B', fontWeight: '700' },
-  centered: { backgroundColor: '#F8FAFC', flex: 1, justifyContent: 'center', padding: 24 },
-  confirmation: { backgroundColor: '#FFF7ED', borderColor: '#FDBA74', borderRadius: 11, borderWidth: 1, gap: 7, marginTop: 16, padding: 16 },
-  confirmationText: { color: '#7C2D12', fontWeight: '700', marginTop: 4 },
-  consumptionCard: { alignItems: 'center', backgroundColor: '#EFF6FF', borderColor: '#BFDBFE', borderRadius: 12, borderWidth: 1, marginTop: 16, padding: 16 },
-  consumptionLabel: { color: '#004B87', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
-  consumptionUnit: { color: '#64748B', fontSize: 13, marginTop: 2 },
-  consumptionValue: { color: '#004B87', fontSize: 36, fontWeight: '900', marginTop: 4 },
-  container: { backgroundColor: '#F8FAFC', padding: 22, paddingBottom: 42, paddingTop: 28 },
-  error: { color: '#B42318', fontSize: 13, marginTop: 7 },
-  eyebrow: { color: '#004B87', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
-  formCard: { backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', borderRadius: 14, borderWidth: 1, elevation: 2, marginTop: 18, padding: 18, shadowColor: '#0F172A', shadowOffset: { height: 3, width: 0 }, shadowOpacity: 0.05, shadowRadius: 8 },
-  info: { color: '#64748B', fontSize: 14, lineHeight: 20, marginTop: 10 },
-  input: { backgroundColor: '#FFFFFF', borderColor: '#CBD5E1', borderRadius: 10, borderWidth: 1, color: '#0F172A', fontSize: 17, minHeight: 54, marginTop: 8, paddingHorizontal: 14 },
-  label: { color: '#334155', fontSize: 14, fontWeight: '700', marginTop: 18 },
-  multiline: { minHeight: 96, paddingTop: 14, textAlignVertical: 'top' },
-  option: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#CBD5E1', borderRadius: 10, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 48, padding: 10 },
-  optionText: { color: '#334155', fontSize: 13, fontWeight: '600', textAlign: 'center' },
-  options: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  photoSection: { marginTop: 18 },
-  photoPreview: { alignSelf: 'flex-start', borderRadius: 10, height: 200, marginTop: 12, width: '100%' },
-  secondaryButton: { backgroundColor: '#F8FAFC', borderColor: '#004B87', borderRadius: 10, borderWidth: 1, marginTop: 12, minHeight: 50, justifyContent: 'center', padding: 14 },
-  secondaryText: { color: '#004B87', fontWeight: '700', textAlign: 'center' },
-  sectionSubtitle: { color: '#64748B', fontSize: 14, lineHeight: 20, marginTop: 5 },
-  sectionTitle: { color: '#0F172A', fontSize: 18, fontWeight: '800' },
-  selectedOption: { backgroundColor: '#EFF6FF', borderColor: '#004B87' },
-  selectedOptionText: { color: '#004B87', fontWeight: '800', textAlign: 'center' },
-  subtitle: { color: '#64748B', fontSize: 15, marginTop: 6 },
-  title: { color: '#0F172A', fontSize: 28, fontWeight: '900', marginTop: 6 },
-  warning: { color: '#9A3412', fontSize: 16, fontWeight: '800' },
-  warningDescription: { color: '#9A3412', fontSize: 14, lineHeight: 20 },
-});
