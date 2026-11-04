@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, View } from 'react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { useReading } from '../../context/reading-context';
 import { useNotice } from '../../context/notice-context';
@@ -17,6 +18,7 @@ import {
   SecondaryButton,
   StatusChip,
 } from '../../components/ui';
+import { Text } from '../../components/ui/text';
 import type { StatusTone } from '../../components/ui';
 
 function StoredPhotoPreview({ path }: { path: string }): React.JSX.Element {
@@ -105,59 +107,70 @@ export default function PendingScreen(): React.JSX.Element {
 
   return (
     <Screen>
-      <View className="relative overflow-hidden rounded-[32px] bg-brand-dark p-5">
+      <Animated.View
+        className="relative overflow-hidden rounded-[32px] bg-brand-dark p-5"
+        entering={FadeInDown.duration(320)}
+      >
         <View className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-brand" />
-        <Text className="text-xs font-bold uppercase tracking-widest text-on-brand">
+        <View className="absolute -bottom-14 -left-8 h-32 w-32 rounded-full border-[12px] border-white/10" />
+        <Text className="relative text-xs font-bold text-on-brand">
           Control de lecturas
         </Text>
-        <Text className="mt-2 text-3xl font-extrabold uppercase tracking-wide text-white">
+        <Text className="relative mt-2 text-3xl font-extrabold text-white">
           Lecturas registradas
         </Text>
-        <Text className="mt-2 text-sm font-semibold text-on-brand">
+        <Text className="relative mt-2 text-sm font-semibold text-on-brand">
           Revisa el estado de cada lectura y sus verificaciones de campo
         </Text>
-      </View>
+      </Animated.View>
 
       {readings.length === 0 ? (
-        <Card className="items-center gap-3 py-8" variant="highlight">
-          <Text className="text-3xl text-content-muted">≡</Text>
-          <Text className="text-base text-content-muted">No hay lecturas registradas.</Text>
-        </Card>
+        <Animated.View entering={FadeInUp.duration(300)}>
+          <Card className="items-center gap-3 py-8" variant="highlight">
+            <Text className="text-3xl text-content-muted">≡</Text>
+            <Text className="text-base text-content-muted">No hay lecturas registradas.</Text>
+          </Card>
+        </Animated.View>
       ) : null}
 
-      {readings.map((reading) => (
-        <Card
-          className="gap-3"
+      {readings.map((reading, index) => (
+        <Animated.View
+          className="w-full"
+          entering={FadeInUp.delay(index * 65).duration(300)}
           key={reading.id}
-          variant={reading.syncStatus === 'pendiente' ? 'highlight' : 'success'}
         >
-          <View className="flex-row items-center justify-between gap-3">
-            <Text className="flex-1 text-lg font-bold text-content">{reading.meterCode}</Text>
+          <Card
+            className="gap-3"
+            variant={reading.syncStatus === 'pendiente' ? 'highlight' : 'success'}
+          >
+            <View className="flex-row items-center justify-between gap-3">
+              <Text className="flex-1 text-lg font-bold text-content">{reading.meterCode}</Text>
+              <StatusChip
+                label={reading.syncStatus === 'pendiente' ? 'Pendiente de enviar' : 'Enviada'}
+                tone={reading.syncStatus === 'pendiente' ? 'warning' : 'success'}
+                showIcon
+              />
+            </View>
+
+            <View>
+              <KeyValueRow label="Período" value={reading.period} />
+              <KeyValueRow label="Consumo" value={String(reading.consumption ?? 'Sin lectura')} />
+              <KeyValueRow label="Fecha" last value={new Date(reading.createdAt).toLocaleString()} />
+            </View>
+
             <StatusChip
-              label={reading.syncStatus === 'pendiente' ? 'Pendiente de enviar' : 'Enviada'}
-              tone={reading.syncStatus === 'pendiente' ? 'warning' : 'success'}
+              label={verificationLabels[reading.verificationStatus]}
+              tone={verificationTones[reading.verificationStatus]}
               showIcon
             />
-          </View>
 
-          <View>
-            <KeyValueRow label="Período" value={reading.period} />
-            <KeyValueRow label="Consumo" value={String(reading.consumption ?? 'Sin lectura')} />
-            <KeyValueRow label="Fecha" last value={new Date(reading.createdAt).toLocaleString()} />
-          </View>
+            {reading.photoPath ? <StoredPhotoPreview path={reading.photoPath} /> : null}
 
-          <StatusChip
-            label={verificationLabels[reading.verificationStatus]}
-            tone={verificationTones[reading.verificationStatus]}
-            showIcon
-          />
-
-          {reading.photoPath ? <StoredPhotoPreview path={reading.photoPath} /> : null}
-
-          {reading.syncStatus === 'pendiente' ? (
-            <SecondaryButton label="Corregir lectura" onPress={() => void editReading(reading)} />
-          ) : null}
-        </Card>
+            {reading.syncStatus === 'pendiente' ? (
+              <SecondaryButton label="Corregir lectura" onPress={() => void editReading(reading)} />
+            ) : null}
+          </Card>
+        </Animated.View>
       ))}
 
       <GhostButton label="Volver al inicio" onPress={() => router.replace('/home')} />

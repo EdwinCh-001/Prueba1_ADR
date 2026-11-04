@@ -51,9 +51,56 @@ export const sessionSchema = z.object({
   isActive: z.boolean(),
 });
 
+export const usernameSchema = z
+  .string()
+  .trim()
+  .min(2, 'El nombre debe tener al menos 2 caracteres')
+  .max(80, 'El nombre no puede superar 80 caracteres')
+  .regex(
+    /^[\p{L}]+(?:[ '\u2019-][\p{L}]+)*$/u,
+    'Usa letras, espacios, apóstrofes o guiones',
+  );
+
+const isValidEcuadorianPhone = (value: string): boolean => {
+  const normalizedPhone = value.replace(/[\s()-]/g, '');
+  return /^(?:09\d{8}|0[2-7]\d{7}|\+5939\d{8}|\+593[2-7]\d{7})$/.test(normalizedPhone);
+};
+
+export const phoneNumberSchema = z
+  .string()
+  .trim()
+  .max(20, 'El teléfono no puede superar 20 caracteres')
+  .refine(
+    (value) => value === '' || isValidEcuadorianPhone(value),
+    'Ingresa un teléfono válido de Ecuador (ej. 0991234567 o +593 99 123 4567)',
+  );
+
+export const userProfileSchema = z.object({
+  displayName: usernameSchema,
+  phoneNumber: phoneNumberSchema,
+  photoPath: z.string().min(1).nullable(),
+});
+
 export const loginFormSchema = z.object({
-  employeeCode: z.string().min(1, 'Ingresa tu código de empleado'),
+  email: z.string().trim().email('Ingresa un correo válido'),
   password: z.string().min(1, 'Ingresa tu clave'),
+});
+
+export const registerFormSchema = z
+  .object({
+    displayName: usernameSchema,
+    employeeCode: z.string().trim().min(3, 'Ingresa un código de empleado válido'),
+    email: z.string().trim().email('Ingresa un correo válido'),
+    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+    confirmPassword: z.string().min(1, 'Confirma tu contraseña'),
+  })
+  .refine((value) => value.password === value.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'Las contraseñas no coinciden',
+  });
+
+export const passwordResetFormSchema = z.object({
+  email: z.string().trim().email('Ingresa un correo válido'),
 });
 
 export const draftFormSchema = z.object({
@@ -138,5 +185,8 @@ export type Meter = z.infer<typeof meterSchema>;
 export type Reading = z.infer<typeof readingSchema>;
 export type Draft = z.infer<typeof draftSchema>;
 export type Session = z.infer<typeof sessionSchema>;
+export type UserProfile = z.infer<typeof userProfileSchema>;
 export type LoginForm = z.infer<typeof loginFormSchema>;
+export type RegisterForm = z.infer<typeof registerFormSchema>;
+export type PasswordResetForm = z.infer<typeof passwordResetFormSchema>;
 export type ReadingForm = z.infer<typeof readingFormSchema>;

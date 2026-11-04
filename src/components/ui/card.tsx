@@ -21,8 +21,10 @@ export function Card({
   variant = 'default',
   elevated = false,
 }: CardProps): React.JSX.Element {
+  const shadowClass = elevated ? 'shadow-md shadow-black/10' : 'shadow-sm shadow-black/5';
+
   return (
-    <View className={`rounded-3xl border p-5 ${variantClasses[variant]} ${elevated ? 'shadow-sm' : ''} ${className}`}>
+    <View className={`rounded-3xl border p-5 ${shadowClass} ${variantClasses[variant]} ${className}`}>
       {children}
     </View>
   );

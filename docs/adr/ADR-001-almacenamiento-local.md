@@ -26,7 +26,7 @@ El almacenamiento debe funcionar sin señal y cargarse antes de mostrar cualquie
 
 | **Alternativa** | **Ventajas en este proyecto** | **Desventajas en este proyecto** |
 | --- | --- | --- |
-| expo-sqlite para datos y expo-secure-store para la sesión | SQLite permite un índice único por medidor y periodo, que hace cumplir R10 en la base y no solo en el código; las transacciones evitan lecturas guardadas a medias; las consultas por estado de envío resuelven la cola de R9. SecureStore guarda la credencial cifrada con el almacén seguro del sistema. | Dos dependencias y dos APIs distintas. Hay que diseñar el esquema, escribir SQL y manejar migraciones. |
+| expo-sqlite para datos y expo-secure-store para la sesión | SQLite permite un índice único por medidor y periodo, que hace cumplir R10 en la base y no solo en el código; las transacciones evitan lecturas guardadas a medias; las consultas por estado de envío resuelven la cola de R9. SecureStore cifra la persistencia local de Firebase Auth con el almacén seguro del sistema. | Dos APIs distintas. Hay que diseñar el esquema, escribir SQL y manejar migraciones. |
 | Solo expo-sqlite (sesión incluida) | Una sola dependencia y una sola API. | La sesión quedaría en un archivo de base de datos sin cifrar. Mezcla una credencial con datos de trabajo en el mismo almacén. |
 | AsyncStorage para todo | Muy simple para guardar sesión y borrador como pares clave-valor. | Solo guarda texto: para saber si un medidor ya tiene lectura en el mes hay que cargar y filtrar todo en JavaScript. No hay transacciones ni índices, por lo que R10 y la cola de R9 dependerían solo del código. La sesión queda sin cifrar. |
 | MMKV para todo | Lecturas y escrituras muy rápidas. | Requiere código nativo y un build propio, algo que no trae el proyecto base. Sigue siendo clave-valor, con los mismos límites de consulta que AsyncStorage. |
@@ -45,14 +45,14 @@ Se usan dos almacenes, cada uno para lo que hace mejor.
 - Las operaciones que modifican más de una fila se hacen dentro de una transacción.
 - La versión del esquema se controla con `PRAGMA user_version` para poder migrar.
 
-**expo-secure-store** guarda solo la sesión: el código de empleado y un indicador de sesión activa. La clave no se guarda; con datos quemados se valida contra una constante en el momento del ingreso (R1).
+**expo-secure-store** guarda la persistencia local de Firebase Auth mediante un adaptador de `getReactNativePersistence`. Firebase restaura el usuario y sus tokens de sesión; la contraseña no se conserva. El código de empleado se guarda como nombre de perfil de Firebase. SQLite no almacena credenciales ni datos de sesión (R1).
 
 ## Consecuencias
 
 - La regla de no duplicar por medidor y mes la hace cumplir la base de datos, no solo la interfaz.
-- La sesión queda cifrada y separada de los datos de trabajo.
+- La persistencia local de Firebase Auth queda cifrada y separada de los datos de trabajo.
 - El error de un almacén no afecta al otro: un fallo al abrir la base no pierde la sesión, y viceversa.
-- Se agregan dos dependencias, que quedan justificadas en este ADR.
+- `expo-sqlite` y `expo-secure-store` resuelven las necesidades de persistencia local; Firebase Auth gestiona las cuentas y la verificación de correo.
 - El esquema es un compromiso: cambiar una columna obliga a escribir una migración.
 - La base de datos no está cifrada, por lo que no debe guardarse ninguna credencial en ella.
 - La foto no se guarda dentro de SQLite: la tabla solo guarda su ruta. La conservación del archivo se decide en el ADR de la foto.
@@ -65,7 +65,7 @@ Se usan dos almacenes, cada uno para lo que hace mejor.
 - Intentar registrar dos veces el mismo medidor en el mismo mes: el segundo registro debe ser rechazado.
 - Registrar una lectura en modo avión, cerrar la aplicación desde recientes y abrirla: la lectura sigue como pendiente.
 - Consultar un medidor con señal, activar modo avión y volver a consultarlo: muestra los datos desde la caché.
-- Revisar que en SecureStore solo se guarda el código de empleado y el indicador de sesión, y que no aparece ninguna clave.
+- Verificar que la sesión de Firebase Auth se restaura desde SecureStore, que la contraseña no se guarda y que SQLite no contiene datos de autenticación.
 - Revisar que `package.json` contiene `expo-sqlite` y `expo-secure-store`, y no `@react-native-async-storage/async-storage` ni `react-native-mmkv`.
 
 ## Uso de IA

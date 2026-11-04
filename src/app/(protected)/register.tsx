@@ -2,7 +2,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { Image, Pressable, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, TextInput, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 import { meterStatusLabels, useReading } from '../../context/reading-context';
 import { useSession } from '../../context/session-context';
@@ -39,6 +40,7 @@ import {
   StatsRow,
   StatusChip,
 } from '../../components/ui';
+import { Text } from '../../components/ui/text';
 
 const getPeriod = (): string => new Date().toISOString().slice(0, 7);
 const getTimestamp = (): string => new Date().toISOString();
@@ -47,9 +49,9 @@ const getClientId = (): string =>
   `reading-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const consumptionInputClassName =
-  'h-16 rounded-2xl border border-line bg-field px-4 text-center text-3xl font-bold text-content focus:border-brand-light';
+  'h-16 rounded-2xl border border-line bg-field px-4 font-ui-nunito-bold text-center text-3xl font-bold text-content focus:border-brand-light';
 const multilineInputClassName =
-  'min-h-24 rounded-2xl border border-line bg-field px-4 pt-3 text-base text-content focus:border-brand-light';
+  'min-h-24 rounded-2xl border border-line bg-field px-4 pt-3 font-ui-nunito-regular text-base text-content focus:border-brand-light';
 
 const selectedStatusClasses: Record<ReadingForm['meterStatus'], string> = {
   normal: 'border-success bg-success-soft',
@@ -307,12 +309,17 @@ export default function RegisterScreen(): React.JSX.Element {
 
   return (
     <Screen>
-      <View className="overflow-hidden rounded-3xl border border-line/90 bg-surface/85">
-        <View className="gap-2 bg-brand p-5">
-          <Text className="text-xs font-bold uppercase tracking-widest text-on-brand">
+      <Animated.View
+        className="overflow-hidden rounded-3xl border border-line/90 bg-surface/85"
+        entering={FadeInDown.duration(320)}
+      >
+        <View className="relative gap-2 overflow-hidden bg-brand p-5">
+          <View className="absolute -right-10 -top-12 h-32 w-32 rounded-full bg-brand-dark/35" />
+          <View className="absolute -bottom-14 left-[34%] h-28 w-28 rounded-full border-[10px] border-white/10" />
+          <Text className="relative text-xs font-bold text-on-brand">
             Registro de lectura
           </Text>
-          <Text className="text-3xl font-extrabold text-white">{meter.code}</Text>
+          <Text className="relative text-3xl font-extrabold text-white">{meter.code}</Text>
         </View>
         <AccentBar />
         <View className="p-5">
@@ -323,41 +330,46 @@ export default function RegisterScreen(): React.JSX.Element {
             ]}
           />
         </View>
-      </View>
+      </Animated.View>
 
-      <Card className="gap-4" variant={isAnomalous ? 'highlight' : 'default'}>
-        <SectionTitle showIcon>Estado del medidor</SectionTitle>
-        <Text className="text-sm text-content-muted">
-          Selecciona la condición observada en campo.
-        </Text>
-        <View className="flex-row gap-2">
-          {(Object.keys(meterStatusLabels) as ReadingForm['meterStatus'][]).map((status) => (
-            <Controller
-              control={control}
-              key={status}
-              name="meterStatus"
-              render={({ field: { onChange, value } }) => (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: value === status }}
-                  className={`flex-1 items-center rounded-2xl border py-3 ${
-                    value === status ? selectedStatusClasses[status] : 'border-line bg-field'
-                  }`}
-                  onPress={() => onChange(status)}
-                >
-                  <Text
-                    className={`text-center text-sm font-bold ${
-                      value === status ? 'text-content' : 'text-content-muted'
+      <Animated.View
+        className="w-full"
+        entering={FadeIn.delay(120).duration(300)}
+      >
+        <Card className="gap-4" variant={isAnomalous ? 'highlight' : 'default'}>
+          <SectionTitle showIcon>Estado del medidor</SectionTitle>
+          <Text className="text-sm text-content-muted" variant="subtitle">
+            Selecciona la condición observada en campo.
+          </Text>
+          <View className="flex-row gap-2">
+            {(Object.keys(meterStatusLabels) as ReadingForm['meterStatus'][]).map((status) => (
+              <Controller
+                control={control}
+                key={status}
+                name="meterStatus"
+                render={({ field: { onChange, value } }) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: value === status }}
+                    className={`flex-1 items-center rounded-2xl border py-3 ${
+                      value === status ? selectedStatusClasses[status] : 'border-line bg-field'
                     }`}
+                    onPress={() => onChange(status)}
                   >
-                    {meterStatusLabels[status]}
-                  </Text>
-                </Pressable>
-              )}
-            />
-          ))}
-        </View>
-      </Card>
+                    <Text
+                      className={`text-center text-sm font-bold ${
+                        value === status ? 'text-content' : 'text-content-muted'
+                      }`}
+                    >
+                      {meterStatusLabels[status]}
+                    </Text>
+                  </Pressable>
+                )}
+              />
+            ))}
+          </View>
+        </Card>
+      </Animated.View>
 
       {meterStatus !== 'inaccesible' ? (
         <Card className="gap-4" variant="highlight">
@@ -383,7 +395,7 @@ export default function RegisterScreen(): React.JSX.Element {
           </Field>
           {consumption !== null ? (
             <View className="items-center gap-1 rounded-2xl border border-line bg-field p-5">
-              <Text className="text-xs font-bold uppercase tracking-widest text-content-muted">
+              <Text className="text-xs font-bold text-content-muted">
                 Consumo calculado
               </Text>
               <Text
@@ -440,14 +452,12 @@ export default function RegisterScreen(): React.JSX.Element {
               name="reason"
               render={({ field: { onBlur, onChange, value } }) => (
                 <TextInput
-                  className={multilineInputClassName}
                   multiline
                   onBlur={onBlur}
                   onChangeText={onChange}
                   placeholder="Indica por qué no fue posible acceder"
                   placeholderTextColorClassName="accent-content-subtle"
-                  // textAlignVertical no tiene equivalente en className.
-                  style={{ textAlignVertical: 'top' }}
+                  className={`${multilineInputClassName} align-top`}
                   value={value}
                 />
               )}
@@ -465,14 +475,12 @@ export default function RegisterScreen(): React.JSX.Element {
               name="damageDescription"
               render={({ field: { onBlur, onChange, value } }) => (
                 <TextInput
-                  className={multilineInputClassName}
                   multiline
                   onBlur={onBlur}
                   onChangeText={onChange}
                   placeholder="Describe el daño observado"
                   placeholderTextColorClassName="accent-content-subtle"
-                  // textAlignVertical no tiene equivalente en className.
-                  style={{ textAlignVertical: 'top' }}
+                  className={`${multilineInputClassName} align-top`}
                   value={value}
                 />
               )}

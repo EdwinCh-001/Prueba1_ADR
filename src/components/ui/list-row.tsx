@@ -1,4 +1,6 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+
+import { Text } from './text';
 
 interface ListRowProps {
   glyph: string;

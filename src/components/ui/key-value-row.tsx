@@ -1,4 +1,6 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+
+import { Text } from './text';
 
 interface KeyValueRowProps {
   label: string;

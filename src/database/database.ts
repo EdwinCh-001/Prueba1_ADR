@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 const DATABASE_NAME = 'epmaps.db';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -49,6 +49,15 @@ const createSchema = async (database: SQLite.SQLiteDatabase): Promise<void> => {
       medidor_codigo TEXT,
       paso_actual TEXT NOT NULL,
       datos_json TEXT NOT NULL,
+      ruta_foto TEXT,
+      actualizado_en TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS perfiles (
+      firebase_uid TEXT PRIMARY KEY NOT NULL,
+      codigo_empleado TEXT NOT NULL,
+      nombre_visible TEXT NOT NULL,
+      telefono_contacto TEXT NOT NULL DEFAULT '',
       ruta_foto TEXT,
       actualizado_en TEXT NOT NULL
     );

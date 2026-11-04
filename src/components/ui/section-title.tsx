@@ -1,4 +1,6 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+
+import { Text } from './text';
 
 interface SectionTitleProps {
   children: string;
@@ -10,7 +12,9 @@ export function SectionTitle({ children, className = '', showIcon = false }: Sec
   return (
     <View className="flex-row items-center gap-2">
       {showIcon ? <Text className="text-base font-bold text-accent-red">◆</Text> : null}
-      <Text className={`text-sm font-semibold text-content-muted ${className}`}>{children}</Text>
+      <Text className={`text-sm font-semibold text-content-muted ${className}`} variant="title">
+        {children}
+      </Text>
     </View>
   );
 }

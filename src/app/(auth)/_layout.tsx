@@ -10,6 +10,8 @@ export default function AuthLayout(): React.JSX.Element {
       <Stack
         screenOptions={{
           headerShown: false,
+          animation: 'fade',
+          animationDuration: 240,
           contentStyle: { backgroundColor: 'transparent' },
         }}
       />
@@ -24,6 +26,8 @@ export default function AuthLayout(): React.JSX.Element {
     <Stack
       screenOptions={{
         headerShown: false,
+        animation: 'fade',
+        animationDuration: 240,
         contentStyle: { backgroundColor: 'transparent' },
       }}
     />

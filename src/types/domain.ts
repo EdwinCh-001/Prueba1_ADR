@@ -4,9 +4,12 @@ export type {
   Meter,
   MeterCode,
   MeterStatus,
+  PasswordResetForm,
+  RegisterForm,
   Reading,
   ReadingForm,
   Session,
   SyncStatus,
+  UserProfile,
   VerificationStatus,
 } from './schemas';

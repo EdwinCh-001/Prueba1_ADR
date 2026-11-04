@@ -1,4 +1,6 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+
+import { Text } from './text';
 
 interface FieldProps extends React.PropsWithChildren {
   label: string;
@@ -9,7 +11,7 @@ export function Field({ label, error, children }: FieldProps): React.JSX.Element
   return (
     <View className="gap-2">
       <View className="flex-row items-center gap-2">
-        <Text className="text-sm font-semibold text-content-muted">{label}</Text>
+        <Text className="text-sm font-semibold text-content-muted" variant="subtitle">{label}</Text>
       </View>
       {children}
       {error ? <Text className="text-sm text-danger">{error}</Text> : null}

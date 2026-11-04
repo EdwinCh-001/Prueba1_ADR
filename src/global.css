@@ -2,6 +2,19 @@
 @import 'uniwind';
 
 @theme {
+  --font-ui-nunito-regular: "EPMAPSNunitoRegular";
+  --font-ui-nunito-semibold: "EPMAPSNunitoSemiBold";
+  --font-ui-nunito-bold: "EPMAPSNunitoBold";
+  --font-ui-nunito-extrabold: "EPMAPSNunitoExtraBold";
+  --font-ui-montserrat-regular: "EPMAPSMontserratRegular";
+  --font-ui-montserrat-semibold: "EPMAPSMontserratSemiBold";
+  --font-ui-montserrat-bold: "EPMAPSMontserratBold";
+  --font-ui-montserrat-extrabold: "EPMAPSMontserratExtraBold";
+  --font-ui-open-sans-regular: "EPMAPSOpenSansRegular";
+  --font-ui-open-sans-semibold: "EPMAPSOpenSansSemiBold";
+  --font-ui-open-sans-bold: "EPMAPSOpenSansBold";
+  --font-ui-open-sans-extrabold: "EPMAPSOpenSansExtraBold";
+
   /* Neutros (tema claro) */
   --color-background: #f5f7fa;
   --color-surface: #ffffff;

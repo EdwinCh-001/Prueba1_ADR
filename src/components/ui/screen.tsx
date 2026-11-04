@@ -5,7 +5,7 @@ import { withUniwind } from 'uniwind';
 export const StyledSafeAreaView = withUniwind(SafeAreaView);
 
 export const inputClassName =
-  'h-14 rounded-2xl border border-line bg-field px-4 text-base text-content focus:border-brand-light';
+  'h-14 rounded-2xl border border-line bg-field px-4 font-ui-nunito-regular text-base text-content focus:border-brand-light';
 
 interface ScreenProps extends React.PropsWithChildren {
   contentContainerClassName?: string;

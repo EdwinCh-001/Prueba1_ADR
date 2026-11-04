@@ -1,4 +1,6 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+
+import { Text } from './text';
 
 import { Icon, type IconName } from './icon';
 
@@ -44,7 +46,9 @@ export function StatusChip({
   return (
     <View className={`self-start flex-row items-center gap-1 rounded-full border px-3 py-1 ${containerTones[tone]} ${className}`}>
       {showIcon ? <Icon name={toneIcons[tone]} className={`text-xs ${textTones[tone]}`} accessibilityLabel={label} /> : null}
-      <Text className={`text-xs font-semibold uppercase tracking-wide ${textTones[tone]}`}>{label}</Text>
+      <Text className={`text-xs font-semibold ${textTones[tone]}`} variant="subtitle">
+        {label}
+      </Text>
     </View>
   );
 }

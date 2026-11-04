@@ -1,13 +1,22 @@
+import { onAuthStateChanged } from 'firebase/auth';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { DEMO_EMPLOYEE_CODE, DEMO_PASSWORD } from '../constants/auth';
-import { clearSession, getSession, saveSession } from '../database/session-store';
-import type { LoginForm, Session } from '../types/domain';
+import {
+  registerWithEmail,
+  sendPasswordReset,
+  signInWithEmail,
+  signOut as signOutFromFirebase,
+} from '../services/auth-service';
+import { auth } from '../services/firebase';
+import type { LoginForm, PasswordResetForm, RegisterForm, Session } from '../types/domain';
 
 interface SessionContextValue {
   session: Session | null;
   isLoading: boolean;
-  signIn: (credentials: LoginForm) => Promise<boolean>;
+  authStateError: string | null;
+  signIn: (credentials: LoginForm) => Promise<void>;
+  register: (credentials: RegisterForm) => Promise<void>;
+  resetPassword: (credentials: PasswordResetForm) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -15,53 +24,58 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: React.PropsWithChildren): React.JSX.Element {
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(auth !== null);
+  const [authStateError, setAuthStateError] = useState<string | null>(null);
 
   useEffect(() => {
-    let isMounted = true;
-
-    void getSession()
-      .then((storedSession) => {
-        if (isMounted) {
-          setSession(storedSession);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const signIn = useCallback(async (credentials: LoginForm): Promise<boolean> => {
-    if (
-      credentials.employeeCode.trim().toUpperCase() !== DEMO_EMPLOYEE_CODE ||
-      credentials.password !== DEMO_PASSWORD
-    ) {
-      return false;
+    if (!auth) {
+      return;
     }
 
-    const activeSession: Session = {
-      employeeCode: DEMO_EMPLOYEE_CODE,
-      isActive: true,
-    };
-    await saveSession(activeSession);
-    setSession(activeSession);
-    return true;
+    return onAuthStateChanged(
+      auth,
+      (user) => {
+        setSession(
+          user?.emailVerified
+            ? { employeeCode: user.displayName || user.uid, isActive: true }
+            : null,
+        );
+        setAuthStateError(null);
+        setIsLoading(false);
+      },
+      () => {
+        setSession(null);
+        setAuthStateError('No se pudo restaurar la sesión. Intenta iniciar sesión nuevamente.');
+        setIsLoading(false);
+      },
+    );
   }, []);
 
-  const signOut = useCallback(async (): Promise<void> => {
-    await clearSession();
-    setSession(null);
-  }, []);
+  const signIn = useCallback((credentials: LoginForm): Promise<void> => (
+    signInWithEmail(credentials)
+  ), []);
+
+  const register = useCallback((credentials: RegisterForm): Promise<void> => (
+    registerWithEmail(credentials)
+  ), []);
+
+  const resetPassword = useCallback((credentials: PasswordResetForm): Promise<void> => (
+    sendPasswordReset(credentials)
+  ), []);
+
+  const signOut = useCallback((): Promise<void> => signOutFromFirebase(), []);
 
   const value = useMemo(
-    () => ({ session, isLoading, signIn, signOut }),
-    [isLoading, session, signIn, signOut],
+    () => ({
+      session,
+      isLoading,
+      authStateError,
+      signIn,
+      register,
+      resetPassword,
+      signOut,
+    }),
+    [authStateError, isLoading, register, resetPassword, session, signIn, signOut],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

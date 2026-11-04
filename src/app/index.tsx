@@ -1,7 +1,8 @@
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 import { useSession } from '../context/session-context';
+import { Text } from '../components/ui/text';
 
 export default function EntryScreen(): React.JSX.Element {
   const { isLoading, session } = useSession();

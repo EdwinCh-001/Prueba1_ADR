@@ -1,5 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { Modal, Pressable, View } from 'react-native';
+
+import { Text } from '../components/ui/text';
+
+import {
+  FloatingToast,
+  type FloatingToastMessage,
+  type FloatingToastTone,
+} from '../components/ui/floating-toast';
 
 
 export type NoticeTone = 'info' | 'success' | 'warning' | 'danger';
@@ -19,6 +27,7 @@ interface NoticeRequest {
 
 interface NoticeContextValue {
   showNotice: (request: NoticeRequest) => void;
+  showToast: (message: string, tone?: FloatingToastTone) => void;
 }
 
 const NoticeContext = createContext<NoticeContextValue | null>(null);
@@ -32,15 +41,25 @@ const toneStyles: Record<NoticeTone, { accent: string }> = {
 
 export function NoticeProvider({ children }: React.PropsWithChildren): React.JSX.Element {
   const [notice, setNotice] = useState<NoticeRequest | null>(null);
+  const [toast, setToast] = useState<FloatingToastMessage | null>(null);
+  const toastId = useRef(0);
   const showNotice = useCallback((request: NoticeRequest): void => setNotice(request), []);
-  const value = useMemo(() => ({ showNotice }), [showNotice]);
+  const showToast = useCallback((message: string, tone: FloatingToastTone = 'success'): void => {
+    toastId.current += 1;
+    setToast({ id: toastId.current, message, tone });
+  }, []);
+  const dismissToast = useCallback((): void => setToast(null), []);
+  const value = useMemo(() => ({ showNotice, showToast }), [showNotice, showToast]);
 
   const tone = toneStyles[notice?.tone ?? 'info'];
   const actions = notice?.actions ?? [{ label: 'Entendido', onPress: () => setNotice(null) }];
 
   return (
     <NoticeContext.Provider value={value}>
-      {children}
+      <View className="flex-1">
+        {children}
+        <FloatingToast toast={toast} onDismiss={dismissToast} />
+      </View>
       <Modal
         animationType="fade"
         transparent
@@ -51,7 +70,9 @@ export function NoticeProvider({ children }: React.PropsWithChildren): React.JSX
           <View className={`w-full rounded-3xl border-2 bg-surface p-5 ${tone.accent}`}>
             <View className="gap-1">
               <Text className="text-xl font-extrabold text-content">{notice?.title}</Text>
-              <Text className="text-sm leading-5 text-content-muted">{notice?.message}</Text>
+              <Text className="text-sm leading-5 text-content-muted" variant="body">
+                {notice?.message}
+              </Text>
             </View>
             <View className="mt-5 flex-row justify-end gap-3">
               {actions.map((action) => (
