@@ -192,7 +192,7 @@ export default function ProfileScreen(): React.JSX.Element {
         <Text className="text-center text-sm text-on-brand" variant="subtitle">
           Personaliza tu información de técnico
         </Text>
-        <PrimaryButton label="Elegir foto de perfil" onPress={() => void choosePhoto()} />
+        <PrimaryButton label="      Elegir foto de perfil       " onPress={() => void choosePhoto()} />
       </Animated.View>
 
       <Animated.View layout={formLayout}>

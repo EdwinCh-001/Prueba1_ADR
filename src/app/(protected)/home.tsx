@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Image, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Keyboard, Pressable, ScrollView, TextInput, View } from 'react-native';
 import Animated, {
   Easing,
   FadeInDown,
@@ -123,10 +123,10 @@ const HomeHeader = memo(function HomeHeader({
             className="absolute inset-0 items-center justify-center rounded-full border-2 border-white bg-brand px-1"
             style={employeeCodeFaceStyle}
           >
-            <Text className="text-center text-[9px] font-bold text-white" numberOfLines={1}>
+            <Text className="text-center text-[14px] font-bold text-white" numberOfLines={1}>
               Código
             </Text>
-            <Text className="text-center text-[10px] font-extrabold text-white" numberOfLines={2}>
+            <Text className="text-center text-[14px] font-extrabold text-white" numberOfLines={2}>
               {employeeCode}
             </Text>
           </Animated.View>
@@ -150,6 +150,7 @@ export default function HomeScreen(): React.JSX.Element {
   const [meterCode, setMeterCode] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
   const meterResultOffset = useRef(0);
+  const pendingMeterScroll = useRef(false);
   const { control, getValues, handleSubmit, formState: { errors } } = useForm<{ code: string }>({
     defaultValues: { code: '' },
   });
@@ -276,16 +277,37 @@ export default function HomeScreen(): React.JSX.Element {
     setMeterCode('');
   }, []);
 
+  const scrollToMeterResult = useCallback((): void => {
+    scrollViewRef.current?.scrollTo({
+      y: Math.max(0, meterResultOffset.current - 20),
+      animated: false,
+    });
+  }, []);
+
+  const handleMeterCardLayout = useCallback((): void => {
+    if (!pendingMeterScroll.current) {
+      return;
+    }
+
+    pendingMeterScroll.current = false;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(scrollToMeterResult);
+    });
+  }, [scrollToMeterResult]);
+
   const handleMeterSearch = useCallback((): void => {
-    if (meterCodeSchema.safeParse(getValues('code').trim()).success) {
-      scrollViewRef.current?.scrollTo({
-        y: Math.max(0, meterResultOffset.current - 20),
-        animated: false,
-      });
+    const parsedCode = meterCodeSchema.safeParse(getValues('code').trim());
+    if (parsedCode.success) {
+      Keyboard.dismiss();
+      if (visibleMeter?.code === parsedCode.data) {
+        scrollToMeterResult();
+      } else {
+        pendingMeterScroll.current = true;
+      }
     }
 
     void handleSubmit(submitMeterCode)();
-  }, [getValues, handleSubmit, submitMeterCode]);
+  }, [getValues, handleSubmit, scrollToMeterResult, submitMeterCode, visibleMeter]);
 
   return (
     <Screen scrollViewRef={scrollViewRef}>
@@ -372,8 +394,9 @@ export default function HomeScreen(): React.JSX.Element {
         {visibleMeter ? (
           <Animated.View
             className="overflow-hidden rounded-3xl border border-line/90 bg-surface/85"
-            entering={FadeInDown.duration(360)}
+            entering={FadeIn.delay(80).duration(820).easing(Easing.out(Easing.cubic))}
             key={visibleMeter.code}
+            onLayout={handleMeterCardLayout}
           >
             <View className="relative gap-2 overflow-hidden bg-brand p-5">
               <View className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-brand-dark" />
