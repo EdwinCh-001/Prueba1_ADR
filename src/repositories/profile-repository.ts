@@ -36,6 +36,24 @@ const findStoredProfile = async (uid: string): Promise<StoredProfile | null> => 
   );
 };
 
+export const getEmployeeCode = async (
+  uid: string,
+  legacyFallback: string,
+): Promise<string> => {
+  const database = await getDatabase();
+  const profile = await database.getFirstAsync<{ employee_code: string }>(
+    `SELECT codigo_empleado AS employee_code
+     FROM perfiles
+     WHERE firebase_uid = ?`,
+    uid,
+  );
+  const employeeCode = profile?.employee_code.trim() || legacyFallback.trim();
+  if (!employeeCode) {
+    throw new Error('No se encontró el código de empleado del usuario.');
+  }
+  return employeeCode;
+};
+
 export const createInitialUserProfile = async (
   uid: string,
   employeeCode: string,

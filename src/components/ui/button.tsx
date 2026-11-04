@@ -2,7 +2,7 @@ import { ActivityIndicator, Pressable } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
+  withSpring,
   type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnUI } from 'react-native-worklets';
@@ -11,9 +11,22 @@ import { Text } from './text';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const animateButtonScale = (scale: SharedValue<number>, target: number): void => {
+const animateButtonPress = (
+  scale: SharedValue<number>,
+  offsetY: SharedValue<number>,
+  pressed: boolean,
+): void => {
   'worklet';
-  scale.value = withTiming(target, { duration: target < 1 ? 90 : 140 });
+  scale.value = withSpring(pressed ? 0.94 : 1, {
+    damping: pressed ? 13 : 10,
+    stiffness: pressed ? 300 : 240,
+    mass: 0.65,
+  });
+  offsetY.value = withSpring(pressed ? 2 : 0, {
+    damping: 14,
+    stiffness: 280,
+    mass: 0.6,
+  });
 };
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -61,8 +74,9 @@ export function Button({
   const resolvedVariant = variant === 'ghost' && tone === 'danger' ? 'ghost' : variant;
   const textClass = variant === 'ghost' && tone === 'danger' ? 'text-base font-semibold text-danger' : variantTextClasses[resolvedVariant];
   const scale = useSharedValue(1);
+  const offsetY = useSharedValue(0);
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ translateY: offsetY.value }, { scale: scale.value }],
   }));
 
   return (
@@ -75,11 +89,11 @@ export function Button({
       disabled={isBlocked}
       onPressIn={() => {
         if (!isBlocked) {
-          scheduleOnUI(animateButtonScale, scale, 0.97);
+          scheduleOnUI(animateButtonPress, scale, offsetY, true);
         }
       }}
       onPressOut={() => {
-        scheduleOnUI(animateButtonScale, scale, 1);
+        scheduleOnUI(animateButtonPress, scale, offsetY, false);
       }}
       onPress={() => {
         if (!isBlocked) {

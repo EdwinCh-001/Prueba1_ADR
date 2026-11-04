@@ -47,7 +47,7 @@ export const registerWithEmail = async (credentials: RegisterForm): Promise<void
 
   try {
     const employeeCode = credentials.employeeCode.trim();
-    await updateProfile(user, { displayName: employeeCode });
+    await updateProfile(user, { displayName: credentials.displayName.trim() });
     await createInitialUserProfile(user.uid, employeeCode, credentials.displayName);
     await sendEmailVerification(user);
   } finally {

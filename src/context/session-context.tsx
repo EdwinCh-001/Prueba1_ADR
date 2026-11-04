@@ -1,6 +1,7 @@
 import { onAuthStateChanged } from 'firebase/auth';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import { getEmployeeCode } from '../repositories/profile-repository';
 import {
   registerWithEmail,
   sendPasswordReset,
@@ -32,23 +33,51 @@ export function SessionProvider({ children }: React.PropsWithChildren): React.JS
       return;
     }
 
-    return onAuthStateChanged(
+    let active = true;
+    let authChangeId = 0;
+
+    const unsubscribe = onAuthStateChanged(
       auth,
-      (user) => {
-        setSession(
-          user?.emailVerified
-            ? { employeeCode: user.displayName || user.uid, isActive: true }
-            : null,
-        );
-        setAuthStateError(null);
-        setIsLoading(false);
+      async (user) => {
+        const currentChangeId = ++authChangeId;
+        if (!user?.emailVerified) {
+          if (active && currentChangeId === authChangeId) {
+            setSession(null);
+            setAuthStateError(null);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        try {
+          const employeeCode = await getEmployeeCode(user.uid, user.displayName || user.uid);
+          if (active && currentChangeId === authChangeId) {
+            setSession({ employeeCode, isActive: true });
+            setAuthStateError(null);
+            setIsLoading(false);
+          }
+        } catch {
+          if (active && currentChangeId === authChangeId) {
+            setSession(null);
+            setAuthStateError('No se pudo cargar el código de empleado. Intenta iniciar sesión nuevamente.');
+            setIsLoading(false);
+          }
+        }
       },
       () => {
-        setSession(null);
-        setAuthStateError('No se pudo restaurar la sesión. Intenta iniciar sesión nuevamente.');
-        setIsLoading(false);
+        authChangeId += 1;
+        if (active) {
+          setSession(null);
+          setAuthStateError('No se pudo restaurar la sesión. Intenta iniciar sesión nuevamente.');
+          setIsLoading(false);
+        }
       },
     );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   const signIn = useCallback((credentials: LoginForm): Promise<void> => (

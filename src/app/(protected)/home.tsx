@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Image, Pressable, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, TextInput, View } from 'react-native';
 import Animated, {
   Easing,
   FadeInDown,
@@ -148,7 +148,9 @@ export default function HomeScreen(): React.JSX.Element {
   const profileQuery = useProfileQuery();
   const profileName = profileQuery.data?.displayName || session?.employeeCode || '';
   const [meterCode, setMeterCode] = useState('');
-  const { control, handleSubmit, formState: { errors } } = useForm<{ code: string }>({
+  const scrollViewRef = useRef<ScrollView>(null);
+  const meterResultOffset = useRef(0);
+  const { control, getValues, handleSubmit, formState: { errors } } = useForm<{ code: string }>({
     defaultValues: { code: '' },
   });
   const meterQuery = useMeterQuery(meterCode);
@@ -274,8 +276,19 @@ export default function HomeScreen(): React.JSX.Element {
     setMeterCode('');
   }, []);
 
+  const handleMeterSearch = useCallback((): void => {
+    if (meterCodeSchema.safeParse(getValues('code').trim()).success) {
+      scrollViewRef.current?.scrollTo({
+        y: Math.max(0, meterResultOffset.current - 20),
+        animated: false,
+      });
+    }
+
+    void handleSubmit(submitMeterCode)();
+  }, [getValues, handleSubmit, submitMeterCode]);
+
   return (
-    <Screen>
+    <Screen scrollViewRef={scrollViewRef}>
       <HomeHeader
         displayName={profileName}
         employeeCode={session?.employeeCode ?? ''}
@@ -331,77 +344,83 @@ export default function HomeScreen(): React.JSX.Element {
               )}
             />
             {errors.code ? <Text className="text-sm text-danger">{errors.code.message}</Text> : null}
-            <PrimaryButton label="Consultar medidor" onPress={handleSubmit(submitMeterCode)} />
+            <PrimaryButton label="Consultar medidor" onPress={handleMeterSearch} />
           </Card>
         </Animated.View>
       </View>
 
-      {meterQuery.isFetching ? (
-        <Animated.View
-          className="flex-row items-center gap-3"
-          entering={FadeInDown.duration(300)}
-        >
-          <ActivityIndicator colorClassName="accent-brand-light" />
-          <Text className="text-sm text-content-muted">Consultando...</Text>
-        </Animated.View>
-      ) : null}
-      {meterQuery.isError ? (
-        <View className="rounded-2xl border border-danger bg-danger-soft p-3">
-          <Text className="text-sm text-danger">{meterQuery.error.message}</Text>
-        </View>
-      ) : null}
+      <View
+        onLayout={({ nativeEvent }) => {
+          meterResultOffset.current = nativeEvent.layout.y;
+        }}
+      >
+        {meterQuery.isFetching ? (
+          <Animated.View
+            className="flex-row items-center gap-3"
+            entering={FadeInDown.duration(300)}
+          >
+            <ActivityIndicator colorClassName="accent-brand-light" />
+            <Text className="text-sm text-content-muted">Consultando...</Text>
+          </Animated.View>
+        ) : null}
+        {meterQuery.isError ? (
+          <View className="rounded-2xl border border-danger bg-danger-soft p-3">
+            <Text className="text-sm text-danger">{meterQuery.error.message}</Text>
+          </View>
+        ) : null}
 
-      {visibleMeter ? (
-        <Animated.View
-          className="overflow-hidden rounded-3xl border border-line/90 bg-surface/85"
-          entering={FadeInDown.duration(360)}
-          key={visibleMeter.code}
-        >
-          <View className="relative gap-2 overflow-hidden bg-brand p-5">
-            <View className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-brand-dark" />
-            <View className="absolute -right-2 top-16 h-14 w-14 rounded-full bg-brand-dark" />
-            <View className="absolute -bottom-12 -left-8 h-28 w-28 rounded-full border-[10px] border-white/10" />
-            <Text className="relative text-xs font-bold text-on-brand">
-              Medidor
-            </Text>
-            <Text className="relative text-3xl font-extrabold text-white">{visibleMeter.code}</Text>
-            <View className="relative self-start">
-              <StatusChip label={visibleMeter.status} tone="info" />
+        {visibleMeter ? (
+          <Animated.View
+            className="overflow-hidden rounded-3xl border border-line/90 bg-surface/85"
+            entering={FadeInDown.duration(360)}
+            key={visibleMeter.code}
+          >
+            <View className="relative gap-2 overflow-hidden bg-brand p-5">
+              <View className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-brand-dark" />
+              <View className="absolute -right-2 top-16 h-14 w-14 rounded-full bg-brand-dark" />
+              <View className="absolute -bottom-12 -left-8 h-28 w-28 rounded-full border-[10px] border-white/10" />
+              <Text className="relative text-xs font-bold text-on-brand">
+                Medidor
+              </Text>
+              <Text className="relative text-3xl font-extrabold text-white">{visibleMeter.code}</Text>
+              <View className="relative self-start">
+                <StatusChip label={visibleMeter.status} tone="info" />
+              </View>
             </View>
-          </View>
-          <View className="p-5">
-            {[
-              { label: 'Dirección', value: visibleMeter.address },
-              { label: 'Sector', value: visibleMeter.sector },
-              { label: 'Número de cuenta', value: visibleMeter.accountNumber },
-              { label: 'Estado', value: visibleMeter.status },
-              { label: 'Última lectura', value: String(visibleMeter.previousReading) },
-              { label: 'Fecha de la última lectura', value: visibleMeter.previousReadingDate },
-              { label: 'Promedio mensual', value: String(visibleMeter.monthlyAverage) },
-            ].map((item, index, details) => (
-              <Animated.View
-                entering={FadeInDown.delay(index * 65).duration(280)}
-                key={item.label}
-              >
-                <KeyValueRow
-                  label={item.label}
-                  last={index === details.length - 1}
-                  value={item.value}
+            <View className="p-5">
+              {[
+                { label: 'Dirección', value: visibleMeter.address },
+                { label: 'Sector', value: visibleMeter.sector },
+                { label: 'Número de cuenta', value: visibleMeter.accountNumber },
+                { label: 'Estado', value: visibleMeter.status },
+                { label: 'Última lectura', value: String(visibleMeter.previousReading) },
+                { label: 'Fecha de la última lectura', value: visibleMeter.previousReadingDate },
+                { label: 'Promedio mensual', value: String(visibleMeter.monthlyAverage) },
+              ].map((item, index, details) => (
+                <Animated.View
+                  entering={FadeInDown.delay(index * 65).duration(280)}
+                  key={item.label}
+                >
+                  <KeyValueRow
+                    label={item.label}
+                    last={index === details.length - 1}
+                    value={item.value}
+                  />
+                </Animated.View>
+              ))}
+              <View className="pt-4">
+                <PrimaryButton
+                  label="Registrar lectura"
+                  onPress={() => {
+                    setMeter(visibleMeter);
+                    router.push('/register');
+                  }}
                 />
-              </Animated.View>
-            ))}
-            <View className="pt-4">
-              <PrimaryButton
-                label="Registrar lectura"
-                onPress={() => {
-                  setMeter(visibleMeter);
-                  router.push('/register');
-                }}
-              />
+              </View>
             </View>
-          </View>
-        </Animated.View>
-      ) : null}
+          </Animated.View>
+        ) : null}
+      </View>
 
       <View className="gap-3">
         <SectionTitle>Acciones</SectionTitle>

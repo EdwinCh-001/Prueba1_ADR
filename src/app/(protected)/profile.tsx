@@ -5,6 +5,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { ActivityIndicator, Image, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { updateProfile } from 'firebase/auth';
 import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
 
 import {
@@ -71,9 +72,12 @@ export default function ProfileScreen(): React.JSX.Element {
         throw new Error('Tu sesión expiró. Inicia sesión nuevamente.');
       }
 
+      await updateProfile(user, { displayName: values.displayName });
+      await user.reload();
+
       return saveUserProfile(
         user.uid,
-        session?.employeeCode ?? user.displayName ?? user.uid,
+        session?.employeeCode ?? user.uid,
         values,
         photo,
       );

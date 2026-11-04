@@ -1,4 +1,5 @@
 import { ScrollView } from 'react-native';
+import type { Ref } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { withUniwind } from 'uniwind';
 
@@ -9,17 +10,20 @@ export const inputClassName =
 
 interface ScreenProps extends React.PropsWithChildren {
   contentContainerClassName?: string;
+  scrollViewRef?: Ref<ScrollView>;
 }
 
 export function Screen({
   children,
   contentContainerClassName = '',
+  scrollViewRef,
 }: ScreenProps): React.JSX.Element {
   return (
     <ScrollView
       className="flex-1 bg-transparent"
       contentContainerClassName={`px-5 pt-6 pb-10 gap-5 ${contentContainerClassName}`}
       keyboardShouldPersistTaps="handled"
+      ref={scrollViewRef}
     >
       {children}
     </ScrollView>
