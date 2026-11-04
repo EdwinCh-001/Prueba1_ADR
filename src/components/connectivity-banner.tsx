@@ -16,7 +16,10 @@ export function ConnectivityBanner(): React.JSX.Element {
       <View className="absolute -bottom-12 right-[28%] h-24 w-24 rounded-full border-[10px] border-white/5" />
       <View className="relative flex-row items-center justify-between border-b border-white/20 px-5 py-3.5">
         <View className="flex-row items-center gap-2">
-          <PulsingAlert active={!isConnected}>
+          <PulsingAlert
+            active={!isConnected}
+            haloClassName="border-danger"
+          >
             <View className={`rounded-full px-3 py-1.5 ${isConnected ? 'bg-success' : 'bg-danger'}`}>
               <Text className="text-sm font-extrabold text-white" accessibilityRole="text">
                 {isConnected ? 'Conectado' : 'Sin conexión'}
@@ -24,7 +27,10 @@ export function ConnectivityBanner(): React.JSX.Element {
             </View>
           </PulsingAlert>
         </View>
-        <PulsingAlert active={pendingCount > 0}>
+        <PulsingAlert
+          active={pendingCount > 0}
+          haloClassName="border-warning"
+        >
           <View className={`flex-row items-center gap-2 rounded-full border px-3 py-1.5 ${pendingCount > 0 ? 'border-warning bg-warning' : 'border-white/40 bg-white/10'}`}>
             <Text className="text-xs font-extrabold text-white">
               Pendientes {pendingCount}
