@@ -155,6 +155,12 @@ export default function PendingScreen(): React.JSX.Element {
             <View>
               <KeyValueRow label="Período" value={reading.period} />
               <KeyValueRow label="Consumo" value={String(reading.consumption ?? 'Sin lectura')} />
+              {reading.latitude !== null && reading.longitude !== null ? (
+                <KeyValueRow
+                  label="Ubicación"
+                  value={`${reading.latitude.toFixed(6)}, ${reading.longitude.toFixed(6)} (${reading.locationSource === 'gps' ? 'GPS' : 'Manual'})`}
+                />
+              ) : null}
               <KeyValueRow label="Fecha" last value={new Date(reading.createdAt).toLocaleString()} />
             </View>
 

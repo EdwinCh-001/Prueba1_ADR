@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Controller, useForm, useWatch } from 'react-hook-form';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import { Controller, useForm, useWatch, type SubmitErrorHandler } from 'react-hook-form';
 import { Image, Pressable, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
@@ -28,6 +29,8 @@ import {
   readingSchema,
 } from '../../types/schemas';
 import { useSyncState } from '../../providers/sync-provider';
+import { useCurrentLocation } from '../../hooks/use-current-location';
+import { LocationMap } from '../../components/map/location-map';
 import {
   AccentBar,
   Card,
@@ -60,15 +63,31 @@ const selectedStatusClasses: Record<ReadingForm['meterStatus'], string> = {
 };
 
 export default function RegisterScreen(): React.JSX.Element {
+  const queryClient = useQueryClient();
   const { session } = useSession();
   const { showNotice } = useNotice();
   const { meter, form: savedForm, editingReading, clearReading } = useReading();
   const { isConnected, refreshPendingCount, synchronize } = useSyncState();
+  const {
+    status: locationStatus,
+    coords: currentLocationCoords,
+    request: requestCurrentLocation,
+  } = useCurrentLocation();
+  const initialLocationSource = savedForm?.locationSource
+    ?? editingReading?.locationSource
+    ?? null;
+  const [locationMode, setLocationMode] = useState<'gps' | 'manual'>(
+    initialLocationSource === 'manual' ? 'manual' : 'gps',
+  );
+  const handledLocationStatus = useRef<string>('idle');
   const { control, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<ReadingForm>({
     defaultValues: savedForm ?? (editingReading ? {
       anomalyConfirmed: false,
       currentReading: editingReading.currentReading?.toString() ?? '',
       damageDescription: editingReading.damageDescription ?? '',
+      latitude: editingReading.latitude,
+      longitude: editingReading.longitude,
+      locationSource: editingReading.locationSource,
       meterStatus: editingReading.meterStatus,
       photoPath: editingReading.photoPath,
       reason: editingReading.reason ?? '',
@@ -79,6 +98,9 @@ export default function RegisterScreen(): React.JSX.Element {
       meterStatus: 'normal',
       photoPath: null,
       reason: '',
+      latitude: null,
+      longitude: null,
+      locationSource: null,
     }),
     resolver: zodResolver(readingFormSchema),
   });
@@ -87,6 +109,19 @@ export default function RegisterScreen(): React.JSX.Element {
   const currentReadingInput = useWatch({ control, name: 'currentReading' });
   const currentReading = currentReadingInput.trim() === '' ? null : Number(currentReadingInput);
   const formValues = useWatch({ control });
+  const latitude = useWatch({ control, name: 'latitude' }) ?? null;
+  const longitude = useWatch({ control, name: 'longitude' }) ?? null;
+  const locationSource = useWatch({ control, name: 'locationSource' }) ?? null;
+  const handleInvalidSubmit: SubmitErrorHandler<ReadingForm> = (formErrors) => {
+    const locationError = formErrors.latitude?.message;
+    if (locationError) {
+      showNotice({
+        title: 'Ubicación obligatoria',
+        message: locationError,
+        tone: 'warning',
+      });
+    }
+  };
   const consumption = meterStatus !== 'inaccesible'
     && currentReading !== null
     && meter
@@ -108,6 +143,36 @@ export default function RegisterScreen(): React.JSX.Element {
       meter.monthlyAverage,
     )
     : false;
+
+  useEffect(() => {
+    if (latitude === null && locationMode === 'gps' && locationStatus === 'idle') {
+      void requestCurrentLocation();
+    }
+  }, [latitude, locationMode, locationStatus, requestCurrentLocation]);
+
+  useEffect(() => {
+    if (locationStatus === 'ready' && currentLocationCoords && locationMode === 'gps') {
+      setValue('latitude', currentLocationCoords.latitude, { shouldDirty: true });
+      setValue('longitude', currentLocationCoords.longitude, { shouldDirty: true });
+      setValue('locationSource', 'gps', { shouldDirty: true });
+      return;
+    }
+
+    if (
+      ['denied', 'services-off', 'error'].includes(locationStatus)
+      && handledLocationStatus.current !== locationStatus
+    ) {
+      handledLocationStatus.current = locationStatus;
+      setLocationMode('manual');
+      setValue('locationSource', 'manual', { shouldDirty: true });
+      const message = locationStatus === 'denied'
+        ? 'Se necesita permiso de ubicación para registrar la lectura. Puedes marcarla manualmente en el mapa.'
+        : locationStatus === 'services-off'
+          ? 'Activa los servicios de ubicación para obtener GPS. Puedes marcar la ubicación manualmente en el mapa.'
+          : 'No se pudo obtener la ubicación GPS. Marca la ubicación manualmente en el mapa.';
+      showNotice({ title: 'Ubicación no disponible', message, tone: 'warning' });
+    }
+  }, [currentLocationCoords, locationMode, locationStatus, setValue, showNotice]);
 
   useEffect(() => {
     if (!photoPath) {
@@ -184,6 +249,21 @@ export default function RegisterScreen(): React.JSX.Element {
   };
 
   const submit = async (value: ReadingForm): Promise<void> => {
+    if (
+      value.latitude === null
+      || value.latitude === undefined
+      || value.longitude === null
+      || value.longitude === undefined
+      || value.locationSource === null
+      || value.locationSource === undefined
+    ) {
+      showNotice({
+        title: 'Ubicación obligatoria',
+        message: 'Debes obtener la ubicación GPS o marcarla manualmente en el mapa antes de guardar.',
+        tone: 'warning',
+      });
+      return;
+    }
     const numericReading = value.currentReading.trim() === '' ? null : Number(value.currentReading);
     const readingValue = value.meterStatus === 'inaccesible' ? null : numericReading;
     const calculatedConsumption = readingValue === null
@@ -250,6 +330,9 @@ export default function RegisterScreen(): React.JSX.Element {
       syncStatus: 'pendiente',
       verificationPending: true,
       verificationStatus: 'pendiente',
+      latitude: value.latitude,
+      longitude: value.longitude,
+      locationSource: value.locationSource,
       createdAt: now,
       updatedAt: now,
     };
@@ -292,6 +375,7 @@ export default function RegisterScreen(): React.JSX.Element {
     if (editingReading) {
       await deleteDraft(session.employeeCode);
     }
+    await queryClient.invalidateQueries({ queryKey: ['meter-location'] });
     await refreshPendingCount();
     if (isConnected) {
       void synchronize();
@@ -303,6 +387,7 @@ export default function RegisterScreen(): React.JSX.Element {
         ? 'La lectura pendiente fue actualizada.'
         : 'La lectura quedó pendiente de verificación y envío.',
       tone: 'success',
+      animation: 'success',
       actions: [{ label: 'Aceptar', onPress: () => router.replace('/home') }],
     });
   };
@@ -489,6 +574,98 @@ export default function RegisterScreen(): React.JSX.Element {
         </Card>
       ) : null}
 
+      <Card className="gap-4">
+        <View className="flex-row items-center justify-between gap-3">
+          <SectionTitle showIcon>Ubicación de la lectura</SectionTitle>
+          <StatusChip
+            label={locationSource === 'manual' ? 'Manual' : 'GPS'}
+            tone={locationSource === 'manual' ? 'info' : 'success'}
+            showIcon
+          />
+        </View>
+        <Text className="text-sm text-content-muted" variant="subtitle">
+          Registra dónde se tomó esta lectura.
+        </Text>
+        <View className="flex-row gap-2">
+          {([
+            { label: 'Automática (GPS)', value: 'gps' as const },
+            { label: 'Manual', value: 'manual' as const },
+          ]).map((option) => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: locationMode === option.value }}
+              className={`flex-1 items-center rounded-2xl border py-3 ${
+                locationMode === option.value
+                  ? 'border-brand-light bg-brand-soft'
+                  : 'border-line bg-field'
+              }`}
+              key={option.value}
+              onPress={() => {
+                setLocationMode(option.value);
+                setValue('locationSource', option.value, { shouldDirty: true });
+                if (option.value === 'gps') {
+                  void requestCurrentLocation();
+                }
+              }}
+            >
+              <Text
+                className={`text-center text-sm font-bold ${
+                  locationMode === option.value ? 'text-content' : 'text-content-muted'
+                }`}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <LocationMap
+          latitude={latitude}
+          longitude={longitude}
+          editable={locationMode === 'manual'}
+          height={256}
+          onPositionChange={(nextLatitude, nextLongitude) => {
+            setLocationMode('manual');
+            setValue('latitude', nextLatitude, { shouldDirty: true });
+            setValue('longitude', nextLongitude, { shouldDirty: true });
+            setValue('locationSource', 'manual', { shouldDirty: true });
+          }}
+        />
+        <Text className="text-sm text-content-muted">
+          {locationStatus === 'loading' && locationMode === 'gps'
+            ? 'Obteniendo ubicación...'
+            : locationStatus === 'ready' && locationSource === 'gps'
+              ? 'Ubicación GPS obtenida'
+              : locationStatus === 'denied'
+                ? 'Permiso de ubicación denegado. Marca la ubicación manualmente.'
+                : locationStatus === 'services-off'
+                  ? 'Los servicios de ubicación están apagados. Marca la ubicación manualmente.'
+                  : locationStatus === 'error'
+                    ? 'No se pudo obtener la ubicación GPS. Marca la ubicación manualmente.'
+                    : null}
+        </Text>
+        {latitude !== null && longitude !== null ? (
+          <Text className="text-center text-sm text-content-muted">
+            {latitude.toFixed(6)}, {longitude.toFixed(6)}
+          </Text>
+        ) : (
+          <Text className="text-center text-sm text-content-muted">
+            Selecciona una ubicación en el mapa.
+          </Text>
+        )}
+        {errors.latitude?.message ? (
+          <Text className="text-sm text-danger">{errors.latitude.message}</Text>
+        ) : null}
+        {locationMode === 'gps' ? (
+          <SecondaryButton
+            label="Actualizar ubicación"
+            loading={locationStatus === 'loading'}
+            onPress={() => {
+              void requestCurrentLocation();
+            }}
+          />
+        ) : null}
+      </Card>
+
       <Controller
         control={control}
         name="photoPath"
@@ -613,7 +790,7 @@ export default function RegisterScreen(): React.JSX.Element {
           disabled={isSubmitting}
           loading={isSubmitting}
           label="Guardar lectura"
-          onPress={handleSubmit(submit)}
+          onPress={handleSubmit(submit, handleInvalidSubmit)}
         />
         <GhostButton label="Cancelar" onPress={() => void cancelRegistration()} />
       </View>

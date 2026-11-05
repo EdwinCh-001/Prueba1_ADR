@@ -15,10 +15,6 @@ import { Montserrat_400Regular } from '@expo-google-fonts/montserrat/400Regular'
 import { Montserrat_600SemiBold } from '@expo-google-fonts/montserrat/600SemiBold';
 import { Montserrat_700Bold } from '@expo-google-fonts/montserrat/700Bold';
 import { Montserrat_800ExtraBold } from '@expo-google-fonts/montserrat/800ExtraBold';
-import { OpenSans_400Regular } from '@expo-google-fonts/open-sans/400Regular';
-import { OpenSans_600SemiBold } from '@expo-google-fonts/open-sans/600SemiBold';
-import { OpenSans_700Bold } from '@expo-google-fonts/open-sans/700Bold';
-import { OpenSans_800ExtraBold } from '@expo-google-fonts/open-sans/800ExtraBold';
 
 import { SessionProvider } from '../context/session-context';
 import { NoticeProvider } from '../context/notice-context';
@@ -43,10 +39,6 @@ export default function RootLayout(): React.JSX.Element {
     EPMAPSMontserratSemiBold: Montserrat_600SemiBold,
     EPMAPSMontserratBold: Montserrat_700Bold,
     EPMAPSMontserratExtraBold: Montserrat_800ExtraBold,
-    EPMAPSOpenSansRegular: OpenSans_400Regular,
-    EPMAPSOpenSansSemiBold: OpenSans_600SemiBold,
-    EPMAPSOpenSansBold: OpenSans_700Bold,
-    EPMAPSOpenSansExtraBold: OpenSans_800ExtraBold,
   });
 
   useEffect(() => {

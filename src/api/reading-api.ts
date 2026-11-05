@@ -13,6 +13,9 @@ const remoteReadingSchema = z.object({
   consumo: z.number().nullable(),
   motivoDescripcion: z.string(),
   foto: z.string().nullable(),
+  latitud: z.number().min(-90).max(90).nullable().optional(),
+  longitud: z.number().min(-180).max(180).nullable().optional(),
+  origenUbicacion: z.enum(['gps', 'manual']).nullable().optional(),
   fechaRegistro: z.string().min(1),
 });
 
@@ -25,6 +28,9 @@ const toRemoteReading = (reading: Reading) => ({
   consumo: reading.consumption,
   motivoDescripcion: reading.reason ?? reading.damageDescription ?? '',
   foto: reading.photoPath,
+  latitud: reading.latitude,
+  longitud: reading.longitude,
+  origenUbicacion: reading.locationSource,
   fechaRegistro: reading.createdAt,
 });
 

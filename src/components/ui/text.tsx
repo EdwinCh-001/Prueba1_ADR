@@ -18,10 +18,10 @@ const fontClasses: Record<TextVariant, Record<FontWeight, string>> = {
     extrabold: 'font-ui-nunito-extrabold',
   },
   subtitle: {
-    regular: 'font-ui-open-sans-regular',
-    semibold: 'font-ui-open-sans-semibold',
-    bold: 'font-ui-open-sans-bold',
-    extrabold: 'font-ui-open-sans-extrabold',
+    regular: 'font-ui-nunito-regular',
+    semibold: 'font-ui-nunito-semibold',
+    bold: 'font-ui-nunito-bold',
+    extrabold: 'font-ui-nunito-extrabold',
   },
   title: {
     regular: 'font-ui-montserrat-regular',

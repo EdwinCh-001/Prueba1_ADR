@@ -27,3 +27,5 @@ export { StatTile, StatsRow } from './stats';
 export type { StatItem } from './stats';
 export { StatusChip } from './status-chip';
 export type { StatusTone } from './status-chip';
+export { LottieState } from './lottie-state';
+export { LocationMap } from '../map/location-map';

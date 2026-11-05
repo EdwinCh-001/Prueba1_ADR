@@ -28,6 +28,12 @@
       "expo-sqlite",
       "expo-secure-store",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Se usa para registrar dónde se tomó cada lectura de medidor."
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "cameraPermission": "Se necesita la cámara para adjuntar fotografías de respaldo a las lecturas; es obligatoria para medidores dañados o consumos anómalos.",

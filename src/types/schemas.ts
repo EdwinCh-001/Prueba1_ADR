@@ -7,6 +7,7 @@ export const meterCodeSchema = z
 export const meterStatusSchema = z.enum(['normal', 'inaccesible', 'danado']);
 export const syncStatusSchema = z.enum(['pendiente', 'enviada']);
 export const verificationStatusSchema = z.enum(['pendiente', 'verificada', 'inconsistente']);
+export const locationSourceSchema = z.enum(['gps', 'manual']);
 
 export const meterSchema = z.object({
   code: meterCodeSchema,
@@ -33,6 +34,9 @@ export const readingSchema = z.object({
   syncStatus: syncStatusSchema,
   verificationPending: z.boolean(),
   verificationStatus: verificationStatusSchema,
+  latitude: z.number().min(-90).max(90).nullable(),
+  longitude: z.number().min(-180).max(180).nullable(),
+  locationSource: locationSourceSchema.nullable(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 });
@@ -110,6 +114,9 @@ export const draftFormSchema = z.object({
   damageDescription: z.string(),
   photoPath: z.string().min(1).nullable(),
   anomalyConfirmed: z.boolean(),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
+  locationSource: locationSourceSchema.nullable().optional(),
 });
 
 export const registrationDraftPayloadSchema = z.object({
@@ -175,12 +182,30 @@ export const readingFormSchema = draftFormSchema
         message: 'Describe el daño del medidor',
       });
     }
+
+    if (
+      value.latitude === null
+      || value.latitude === undefined
+      || Number.isNaN(value.latitude)
+      || value.longitude === null
+      || value.longitude === undefined
+      || Number.isNaN(value.longitude)
+      || value.locationSource === null
+      || value.locationSource === undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['latitude'],
+        message: 'La ubicación de la lectura es obligatoria',
+      });
+    }
   });
 
 export type MeterCode = z.infer<typeof meterCodeSchema>;
 export type MeterStatus = z.infer<typeof meterStatusSchema>;
 export type SyncStatus = z.infer<typeof syncStatusSchema>;
 export type VerificationStatus = z.infer<typeof verificationStatusSchema>;
+export type LocationSource = z.infer<typeof locationSourceSchema>;
 export type Meter = z.infer<typeof meterSchema>;
 export type Reading = z.infer<typeof readingSchema>;
 export type Draft = z.infer<typeof draftSchema>;

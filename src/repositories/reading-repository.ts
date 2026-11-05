@@ -15,6 +15,9 @@ interface ReadingRow {
   estado_envio: SyncStatus;
   pendiente_verificar: number;
   estado_verificacion: VerificationStatus;
+  latitud: number | null;
+  longitud: number | null;
+  origen_ubicacion: Reading['locationSource'];
   creado_en: string;
   actualizado_en: string;
 }
@@ -33,6 +36,9 @@ const toReading = (row: ReadingRow): Reading => ({
   syncStatus: row.estado_envio,
   verificationPending: row.pendiente_verificar === 1,
   verificationStatus: row.estado_verificacion,
+  latitude: row.latitud,
+  longitude: row.longitud,
+  locationSource: row.origen_ubicacion,
   createdAt: row.creado_en,
   updatedAt: row.actualizado_en,
 });
@@ -44,8 +50,8 @@ export const saveReading = async (reading: Reading): Promise<void> => {
       id, medidor_codigo, periodo, estado_medidor, lectura_actual,
       lectura_anterior, consumo, motivo, descripcion_dano, ruta_foto,
       estado_envio, pendiente_verificar, creado_en, actualizado_en,
-      estado_verificacion
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      estado_verificacion, latitud, longitud, origen_ubicacion
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     reading.id,
     reading.meterCode,
     reading.period,
@@ -61,6 +67,9 @@ export const saveReading = async (reading: Reading): Promise<void> => {
     reading.createdAt,
     reading.updatedAt,
     reading.verificationStatus,
+    reading.latitude,
+    reading.longitude,
+    reading.locationSource,
   );
 };
 
@@ -75,8 +84,8 @@ export const saveReadingAndDeleteDraft = async (
         id, medidor_codigo, periodo, estado_medidor, lectura_actual,
         lectura_anterior, consumo, motivo, descripcion_dano, ruta_foto,
         estado_envio, pendiente_verificar, creado_en, actualizado_en,
-        estado_verificacion
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        estado_verificacion, latitud, longitud, origen_ubicacion
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       reading.id,
       reading.meterCode,
       reading.period,
@@ -92,6 +101,9 @@ export const saveReadingAndDeleteDraft = async (
       reading.createdAt,
       reading.updatedAt,
       reading.verificationStatus,
+      reading.latitude,
+      reading.longitude,
+      reading.locationSource,
     );
     await database.runAsync(
       'DELETE FROM borradores WHERE codigo_empleado = ?',
@@ -118,6 +130,20 @@ export const findReadingByMeterAndPeriod = async (
     'SELECT * FROM lecturas WHERE medidor_codigo = ? AND periodo = ?',
     meterCode,
     period,
+  );
+  return row ? toReading(row) : null;
+};
+
+export const findLatestLocatedReadingByMeter = async (
+  meterCode: string,
+): Promise<Reading | null> => {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<ReadingRow>(
+    `SELECT * FROM lecturas
+     WHERE medidor_codigo = ? AND latitud IS NOT NULL
+     ORDER BY creado_en DESC
+     LIMIT 1`,
+    meterCode,
   );
   return row ? toReading(row) : null;
 };
@@ -156,7 +182,8 @@ export const updateReading = async (reading: Reading): Promise<boolean> => {
     `UPDATE lecturas
      SET estado_medidor = ?, lectura_actual = ?, lectura_anterior = ?,
        consumo = ?, motivo = ?, descripcion_dano = ?, ruta_foto = ?,
-       pendiente_verificar = ?, estado_verificacion = ?, actualizado_en = ?
+       pendiente_verificar = ?, estado_verificacion = ?, latitud = ?,
+       longitud = ?, origen_ubicacion = ?, actualizado_en = ?
      WHERE id = ? AND estado_envio = 'pendiente'`,
     reading.meterStatus,
     reading.currentReading,
@@ -167,6 +194,9 @@ export const updateReading = async (reading: Reading): Promise<boolean> => {
     reading.photoPath,
     reading.verificationPending ? 1 : 0,
     reading.verificationStatus,
+    reading.latitude,
+    reading.longitude,
+    reading.locationSource,
     reading.updatedAt,
     reading.id,
   );

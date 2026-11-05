@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 import { Modal, Pressable, View } from 'react-native';
 
 import { Text } from '../components/ui/text';
+import { LottieState } from '../components/ui/lottie-state';
+import readingSavedAnimation from '../../assets/animations/reading-saved.json';
 
 import {
   FloatingToast,
@@ -23,6 +25,7 @@ interface NoticeRequest {
   message: string;
   tone?: NoticeTone;
   actions?: NoticeAction[];
+  animation?: 'success';
 }
 
 interface NoticeContextValue {
@@ -69,6 +72,15 @@ export function NoticeProvider({ children }: React.PropsWithChildren): React.JSX
         <View className="flex-1 items-center justify-center bg-black/40 px-6">
           <View className={`w-full rounded-3xl border-2 bg-surface p-5 ${tone.accent}`}>
             <View className="gap-1">
+              {notice?.animation === 'success' ? (
+                <LottieState
+                  accessibilityLabel="Lectura guardada correctamente"
+                  autoPlay
+                  loop={false}
+                  sizeClassName="h-24 w-24 self-center"
+                  source={readingSavedAnimation}
+                />
+              ) : null}
               <Text className="text-xl font-extrabold text-content">{notice?.title}</Text>
               <Text className="text-sm leading-5 text-content-muted" variant="body">
                 {notice?.message}

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Image, Keyboard, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Image, Keyboard, Pressable, ScrollView, TextInput, View } from 'react-native';
 import Animated, {
   Easing,
   FadeInDown,
@@ -21,6 +21,7 @@ import { deleteDraft, findDraftByEmployee } from '../../repositories/draft-repos
 import { deleteStoredPhoto } from '../../services/photo-storage';
 import { findCachedMeter } from '../../repositories/meter-cache-repository';
 import { useMeterQuery } from '../../hooks/use-meter-query';
+import { useMeterLocationQuery } from '../../hooks/use-meter-location-query';
 import { useProfileQuery } from '../../hooks/use-profile-query';
 import { useConnectivity, usePendingCount } from '../../providers/sync-provider';
 import {
@@ -34,6 +35,7 @@ import {
   GhostButton,
   KeyValueRow,
   ListRow,
+  LocationMap,
   LogoPlate,
   PrimaryButton,
   Screen,
@@ -41,8 +43,10 @@ import {
   StatsRow,
   StatusChip,
   inputClassName,
+  LottieState,
 } from '../../components/ui';
 import { Text } from '../../components/ui/text';
+import loadingMeterAnimation from '../../../assets/animations/loading-meter.json';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -156,6 +160,7 @@ export default function HomeScreen(): React.JSX.Element {
   });
   const meterQuery = useMeterQuery(meterCode);
   const visibleMeter = meterQuery.data?.code === meterCode ? meterQuery.data : null;
+  const meterLocationQuery = useMeterLocationQuery(visibleMeter?.code ?? '');
   const initials = useMemo(
     () => profileName.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join(''),
     [profileName],
@@ -378,11 +383,18 @@ export default function HomeScreen(): React.JSX.Element {
       >
         {meterQuery.isFetching ? (
           <Animated.View
-            className="flex-row items-center gap-3"
+            className="items-center rounded-3xl border border-line/90 bg-surface/85 p-6"
             entering={FadeInDown.duration(300)}
+            onLayout={handleMeterCardLayout}
           >
-            <ActivityIndicator colorClassName="accent-brand-light" />
-            <Text className="text-sm text-content-muted">Consultando...</Text>
+            <LottieState
+              accessibilityLabel="Consultando información del medidor"
+              autoPlay
+              loop
+              sizeClassName="h-28 w-28"
+              source={loadingMeterAnimation}
+            />
+            <Text className="mt-2 text-base font-bold text-content">Consultando...</Text>
           </Animated.View>
         ) : null}
         {meterQuery.isError ? (
@@ -431,6 +443,32 @@ export default function HomeScreen(): React.JSX.Element {
                   />
                 </Animated.View>
               ))}
+              <View className="gap-3 border-t border-line pt-4">
+                <Text className="text-base font-bold text-content">
+                  Ubicación de la última lectura
+                </Text>
+                {meterLocationQuery.data ? (
+                  <>
+                    <LocationMap
+                      editable={false}
+                      height={224}
+                      latitude={meterLocationQuery.data.latitude}
+                      longitude={meterLocationQuery.data.longitude}
+                      onPositionChange={() => undefined}
+                    />
+                    <Text className="text-sm text-content-muted">
+                      {new Date(meterLocationQuery.data.createdAt).toLocaleString('es-EC')} · período {meterLocationQuery.data.period}
+                    </Text>
+                    <Text className="text-sm text-content-muted">
+                      {meterLocationQuery.data.locationSource === 'gps' ? 'GPS' : 'Manual'} · {meterLocationQuery.data.latitude.toFixed(6)}, {meterLocationQuery.data.longitude.toFixed(6)}
+                    </Text>
+                  </>
+                ) : (
+                  <Text className="text-sm text-content-muted">
+                    Aún no hay una ubicación registrada para este medidor.
+                  </Text>
+                )}
+              </View>
               <View className="pt-4">
                 <PrimaryButton
                   label="Registrar lectura"
